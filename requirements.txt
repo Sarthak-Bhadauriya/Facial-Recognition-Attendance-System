@@ -1,0 +1,8 @@
+Flask
+gunicorn
+opencv-python-headless
+face_recognition
+numpy
+pandas
+openpyxl
+google-generativeai

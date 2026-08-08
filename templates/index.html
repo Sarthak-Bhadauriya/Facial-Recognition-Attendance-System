@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attend-X | Smart Attendance</title>
+  <meta name="description" content="Attend-X — Face Recognition Based Employee Attendance System." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css?v=2" />
+</head>
+<body>
+
+  <!-- Decorative SVG background -->
+  <div class="bg-canvas" aria-hidden="true">
+    <svg class="bg-svg" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <radialGradient id="g1" cx="20%" cy="25%" r="55%"><stop offset="0%" stop-color="#667eea" stop-opacity="0.18"/><stop offset="100%" stop-color="transparent" stop-opacity="0"/></radialGradient>
+        <radialGradient id="g2" cx="85%" cy="70%" r="45%"><stop offset="0%" stop-color="#764ba2" stop-opacity="0.14"/><stop offset="100%" stop-color="transparent" stop-opacity="0"/></radialGradient>
+        <radialGradient id="g3" cx="60%" cy="10%" r="35%"><stop offset="0%" stop-color="#11998e" stop-opacity="0.10"/><stop offset="100%" stop-color="transparent" stop-opacity="0"/></radialGradient>
+      </defs>
+      <ellipse cx="280" cy="220" rx="420" ry="340" fill="url(#g1)"/>
+      <ellipse cx="1200" cy="620" rx="380" ry="300" fill="url(#g2)"/>
+      <ellipse cx="860" cy="80" rx="300" ry="220" fill="url(#g3)"/>
+      <line x1="0" y1="200" x2="1440" y2="700" stroke="#667eea" stroke-opacity="0.04" stroke-width="1.5"/>
+      <line x1="0" y1="400" x2="1440" y2="100" stroke="#764ba2" stroke-opacity="0.04" stroke-width="1.5"/>
+      <circle cx="120" cy="780" r="180" fill="none" stroke="#667eea" stroke-opacity="0.06" stroke-width="1"/>
+      <circle cx="1350" cy="120" r="140" fill="none" stroke="#764ba2" stroke-opacity="0.06" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="app-wrap">
+
+    <!-- Hero Header -->
+    <header class="hero">
+      <div class="hero-brand">
+        <div class="hero-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect width="36" height="36" rx="11" fill="url(#brand-grad)"/>
+            <path d="M18 9a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zm0 2.2a3.3 3.3 0 1 1 0 6.6 3.3 3.3 0 0 1 0-6.6z" fill="white"/>
+            <path d="M9 27c0-4.97 4.03-9 9-9s9 4.03 9 9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div>
+          <h1 class="hero-title">Attend-X</h1>
+          <p class="hero-sub">Face Recognition Attendance Platform</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button id="theme-toggle-btn" class="btn btn-outline btn-sm" style="background:rgba(255,255,255,0.15); color:white; border-color:rgba(255,255,255,0.3); border-radius:30px; padding:8px 14px;">
+          <svg id="theme-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <div class="hero-status">
+          <span class="status-dot"></span>
+          System Active
+        </div>
+      </div>
+    </header>
+
+    <!-- Horizontal Nav -->
+    <nav class="h-nav" role="navigation">
+      <button class="nav-btn active" data-page="attendance" id="nav-attendance">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></svg>
+        Mark Attendance
+      </button>
+      <button class="nav-btn" data-page="register" id="nav-register">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Register Employee
+      </button>
+      <button class="nav-btn" data-page="dashboard" id="nav-dashboard">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Admin Dashboard
+      </button>
+    </nav>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE 1: Mark Attendance                               -->
+    <!-- No password. Authenticated by Unique ID + face match. -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section class="page active" id="page-attendance">
+      <div class="card-wrap-center">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Mark Attendance</h2>
+            <p class="card-sub">Enter your Unique Employee ID, then start the camera. Your face will be verified against the ID you entered before attendance is marked.</p>
+          </div>
+
+          <!-- Unique ID input -->
+          <div class="form-group">
+            <label class="form-label" for="att-uid">Unique Employee ID</label>
+            <input class="form-input" type="text" id="att-uid"
+                   placeholder="Enter Your Unique Employee ID" autocomplete="off"/>
+          </div>
+          <div id="att-uid-err" class="alert alert-error" style="display:none"></div>
+
+          <!-- Buttons -->
+          <div class="btn-row">
+            <button class="btn btn-primary btn-full" id="att-start-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+              Start Attendance
+            </button>
+            <button class="btn btn-outline btn-full" id="att-stop-btn" style="display:none">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              Stop Camera
+            </button>
+          </div>
+
+          <!-- Live camera feed -->
+          <div id="att-camera-section" style="display:none; margin-top:18px">
+            <div class="camera-wrap">
+              <video id="att-video" class="camera-feed" autoplay playsinline muted></video>
+              <canvas id="att-canvas" style="display:none"></canvas>
+              <div class="camera-overlay">
+                <div class="scan-label" id="att-scan-label">Scanning for face…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recognition log -->
+          <div id="att-results" style="display:none; margin-top:18px">
+            <div class="results-header">Recognition Log</div>
+            <div id="att-results-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE 2: Register New Employee                         -->
+    <!-- Requires COMMON EMPLOYEE ACCESS CODE only.           -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section class="page" id="page-register">
+      <div class="card-wrap-center">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Register New Employee</h2>
+            <p class="card-sub">Enter the shared Employee Access Code to unlock registration, then provide the new employee's details and capture their face.</p>
+          </div>
+
+          <!-- Step 1: Employee Access Code -->
+          <div class="form-group">
+            <label class="form-label" for="reg-emp-code">Employee Access Code</label>
+            <input class="form-input" type="password" id="reg-emp-code"
+                   placeholder="Enter Employee Access Code" autocomplete="off"/>
+          </div>
+          <div id="reg-code-err" class="alert alert-error" style="display:none"></div>
+
+          <!-- Step 2: Employee details (revealed after code verified) -->
+          <div id="reg-details" style="display:none">
+            <div class="divider"></div>
+            <div class="form-group">
+              <label class="form-label" for="reg-uid">Unique Employee ID</label>
+              <input class="form-input" type="text" id="reg-uid"
+                     placeholder="e.g. EMP-001" autocomplete="off"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-name">Employee Full Name</label>
+              <input class="form-input" type="text" id="reg-name"
+                     placeholder="e.g. Jane Smith" autocomplete="off"/>
+            </div>
+            <button class="btn btn-primary btn-full" id="reg-open-cam-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Open Camera
+            </button>
+          </div>
+
+          <!-- Step 3: Camera capture -->
+          <div id="reg-camera-section" style="display:none">
+            <div class="divider"></div>
+            <p class="form-label" style="margin-bottom:10px">
+              Position the employee's face clearly in the frame, then click <strong>Capture Face</strong>.
+            </p>
+            <div class="camera-wrap">
+              <video id="reg-video" class="camera-feed" autoplay playsinline muted></video>
+              <canvas id="reg-canvas" style="display:none"></canvas>
+              <div class="camera-overlay">
+                <div class="face-guide"></div>
+              </div>
+            </div>
+            <div class="btn-row" style="margin-top:14px">
+              <button class="btn btn-primary" id="reg-capture-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                Capture Face
+              </button>
+              <button class="btn btn-outline" id="reg-cancel-cam-btn">Cancel</button>
+            </div>
+          </div>
+
+          <div id="reg-result" class="alert" style="display:none; margin-top:14px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE 3: Admin Dashboard                               -->
+    <!-- Requires MANAGER ACCESS CODE only.                   -->
+    <!-- Explicitly rejects the Employee Access Code.         -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section class="page" id="page-dashboard">
+      <div class="card-wrap">
+
+        <!-- Auth gate -->
+        <div class="card card-narrow" id="dash-auth-card">
+          <div class="card-header">
+            <h2 class="card-title">Admin Dashboard</h2>
+            <p class="card-sub">This section is for managers only. Enter the Manager Access Code — the Employee Access Code will not work here.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dash-mgr-code">Manager Access Code</label>
+            <input class="form-input" type="password" id="dash-mgr-code"
+                   placeholder="Enter Manager Access Code" autocomplete="off"/>
+          </div>
+          <div id="dash-auth-err" class="alert alert-error" style="display:none"></div>
+          <button class="btn btn-primary btn-full" id="dash-auth-btn">Unlock Dashboard</button>
+        </div>
+
+        <!-- Dashboard content -->
+        <div id="dash-content" style="display:none">
+          
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+            <button class="btn btn-outline btn-sm" id="dash-lock-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Lock Dashboard
+            </button>
+          </div>
+
+          <!-- KPI Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card kpi-total">
+              <div class="kpi-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+              <div class="kpi-value" id="kpi-total">—</div>
+              <div class="kpi-label">Total Employees</div>
+            </div>
+            <div class="kpi-card kpi-present">
+              <div class="kpi-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+              <div class="kpi-value" id="kpi-present">—</div>
+              <div class="kpi-label">Present Today</div>
+            </div>
+            <div class="kpi-card kpi-late">
+              <div class="kpi-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div class="kpi-value" id="kpi-late">—</div>
+              <div class="kpi-label">Late Today</div>
+            </div>
+            <div class="kpi-card kpi-absent">
+              <div class="kpi-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+              <div class="kpi-value" id="kpi-absent">—</div>
+              <div class="kpi-label">Absent Today</div>
+            </div>
+          </div>
+
+          <!-- AI Summary Section -->
+          <div class="ai-summary-container" style="margin-bottom: 24px;">
+            <button id="btn-ai-summary" class="btn btn-primary" style="margin-bottom: 12px; display: inline-flex; align-items: center; gap: 8px;">
+              ✨ Generate AI Daily Summary
+            </button>
+            <div id="ai-summary-box" style="display: none; padding: 16px; border-radius: 8px; background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.3); color: var(--text-color); font-size: 15px; line-height: 1.6;">
+              <div id="ai-summary-content"></div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tab-bar">
+            <button class="tab-btn active" data-tab="today">Today's Roster</button>
+            <button class="tab-btn" data-tab="search">Search Records</button>
+            <button class="tab-btn" data-tab="monthly">Monthly Summary</button>
+            <button class="tab-btn" data-tab="leaves">Manage Leaves</button>
+            <button class="tab-btn" data-tab="employees">Employees</button>
+          </div>
+
+          <div class="tab-panel active" id="tab-today">
+            <div class="card">
+              <div class="table-toolbar">
+                <h3 class="section-title">Today's Attendance Roster</h3>
+                <button class="btn btn-outline btn-sm" id="export-today-btn">Export CSV</button>
+              </div>
+              <div id="today-table-wrap"></div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-search">
+            <div class="card">
+              <h3 class="section-title" style="margin-bottom:18px">Search Historical Records</h3>
+              <div class="form-row">
+                <div class="form-group flex1">
+                  <label class="form-label" for="search-by">Search By</label>
+                  <select class="form-input" id="search-by">
+                    <option value="uid">Unique Employee ID</option>
+                    <option value="name">Employee Name</option>
+                    <option value="date">Date Range</option>
+                  </select>
+                </div>
+                <div class="form-group flex2" id="search-val-wrap">
+                  <label class="form-label" for="search-val">Search Value</label>
+                  <input class="form-input" type="text" id="search-val"
+                         placeholder="Enter employee ID or name"/>
+                </div>
+              </div>
+              <div id="date-range-wrap" class="form-row" style="display:none">
+                <div class="form-group flex1">
+                  <label class="form-label" for="date-start">Start Date</label>
+                  <input class="form-input" type="date" id="date-start"/>
+                </div>
+                <div class="form-group flex1">
+                  <label class="form-label" for="date-end">End Date</label>
+                  <input class="form-input" type="date" id="date-end"/>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="search-btn">Search Records</button>
+                <button class="btn btn-outline btn-sm" id="export-search-btn" style="display:none">Export CSV</button>
+              </div>
+              <div id="search-table-wrap" class="mt-16"></div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-monthly">
+            <div class="card">
+              <h3 class="section-title" style="margin-bottom:18px">Monthly Performance Summary</h3>
+              <div class="form-row">
+                <div class="form-group flex1">
+                  <label class="form-label" for="month-input">Select Month</label>
+                  <input class="form-input" type="month" id="month-input"/>
+                </div>
+                <div class="form-group" style="align-self:flex-end">
+                  <button class="btn btn-primary" id="month-btn">Generate Report</button>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-outline btn-sm" id="export-month-btn" style="display:none">Export CSV</button>
+              </div>
+              <div id="monthly-table-wrap" class="mt-16"></div>
+            </div>
+          </div>
+          <div class="tab-panel" id="tab-leaves">
+            <div class="card">
+              <h3 class="section-title" style="margin-bottom:18px">Manage Leaves & Holidays</h3>
+              <div class="form-row">
+                <div class="form-group flex1">
+                  <label class="form-label" for="leave-uid">Unique Employee ID</label>
+                  <input class="form-input" type="text" id="leave-uid" placeholder="e.g. EMP-001 (or ALL for Holiday)"/>
+                </div>
+                <div class="form-group flex1">
+                  <label class="form-label" for="leave-date">Date</label>
+                  <input class="form-input" type="date" id="leave-date"/>
+                </div>
+                <div class="form-group flex1">
+                  <label class="form-label" for="leave-type">Type</label>
+                  <select class="form-input" id="leave-type">
+                    <option value="On Leave">Personal Leave</option>
+                    <option value="Holiday">Company Holiday</option>
+                  </select>
+                </div>
+                <div class="form-group" style="align-self:flex-end">
+                  <button class="btn btn-primary" id="add-leave-btn">Add Record</button>
+                </div>
+              </div>
+              <div id="leaves-table-wrap" class="mt-16"></div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-employees">
+            <div class="card">
+              <h3 class="section-title" style="margin-bottom:18px">Manage Employees</h3>
+              <div id="employees-table-wrap" class="mt-16"></div>
+            </div>
+          </div>
+        </div><!-- /dash-content -->
+      </div><!-- /card-wrap -->
+    </section>
+
+  </div><!-- /app-wrap -->
+
+  <footer class="footer">
+    <p>Attend-X &mdash; Face Recognition Attendance Platform &copy; 2026</p>
+  </footer>
+
+  <script src="/static/app.js?v=3"></script>
+</body>
+</html>
