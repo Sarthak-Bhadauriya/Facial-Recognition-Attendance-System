@@ -61,6 +61,11 @@ import math
 # Global state for liveness tracking (uid -> dict)
 liveness_state = {}
 
+def reset_liveness(uid):
+    """Clear liveness state for a given UID (called when camera session ends)."""
+    liveness_state.pop(str(uid), None)
+
+
 def calculate_ear(eye_points):
     """Calculate Eye Aspect Ratio (EAR) given 6 (x,y) eye landmarks."""
     A = math.dist(eye_points[1], eye_points[5])

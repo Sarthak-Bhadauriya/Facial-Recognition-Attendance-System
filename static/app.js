@@ -30,10 +30,10 @@ function hideAlert(el) { if (el) { el.style.display = 'none'; el.textContent = '
 
 // ── Theme Management ─────────────────────────────────────────────────────────────
 function initTheme() {
-  const btn = $('#theme-toggle-btn');
+  const btn  = $('#theme-toggle-btn');
   const icon = $('#theme-icon');
-  
-  const sunIcon = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
+
+  const sunIcon  = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
   const moonIcon = `<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
 
   function setTheme(isDark) {
@@ -48,17 +48,12 @@ function initTheme() {
     }
   }
 
-  // Initial load
   const saved = localStorage.getItem('theme');
-  if (saved === 'dark') setTheme(true);
+  if (saved === 'dark')       setTheme(true);
   else if (saved === 'light') setTheme(false);
   else setTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  if (btn) {
-    btn.addEventListener('click', () => {
-      setTheme(!document.body.classList.contains('dark-theme'));
-    });
-  }
+  if (btn) btn.addEventListener('click', () => setTheme(!document.body.classList.contains('dark-theme')));
 }
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
@@ -122,12 +117,12 @@ function initAttendance() {
   const video       = $('#att-video');
   const canvas      = $('#att-canvas');
 
-  let cameraStream    = null;
-  let recogTimer      = null;
-  let timeoutTimer    = null;
-  let recogBusy       = false;  // prevent concurrent recognition calls
+  let cameraStream = null;
+  let recogTimer   = null;
+  let timeoutTimer = null;
+  let recogBusy    = false;
+  let currentUid   = '';
 
-  // Add a result item to the recognition log
   function logResult(msg, type) {
     const div = document.createElement('div');
     div.className = `result-item ${type}`;
@@ -136,8 +131,8 @@ function initAttendance() {
     resultsEl.style.display = 'block';
   }
 
-  // Fully stop camera and reset UI
-  function stopSession() {
+  // Fully stop camera, reset liveness state, reset UI
+  async function stopSession() {
     clearInterval(recogTimer); recogTimer = null;
     clearTimeout(timeoutTimer); timeoutTimer = null;
     recogBusy = false;
@@ -146,6 +141,11 @@ function initAttendance() {
     stopBtn.style.display    = 'none';
     startBtn.style.display   = 'inline-flex';
     startBtn.disabled        = false;
+
+    // Clear liveness state on server for this UID
+    if (currentUid) {
+      try { await apiFetch('/api/reset-liveness', { uid: currentUid }); } catch (_) {}
+    }
   }
 
   // One recognition cycle
@@ -164,27 +164,25 @@ function initAttendance() {
           break;
 
         case 'liveness_pending':
-          scanLabel.textContent = data.message || 'Please blink to verify...';
+          scanLabel.textContent = data.message || 'Please blink to verify…';
           break;
 
         case 'mismatch':
           scanLabel.textContent = 'Face does not match';
           logResult(data.message, 'error');
-          // Stop immediately — clear mismatch, don't keep scanning
-          stopSession();
+          await stopSession();
           break;
 
         case 'no_encoding':
           scanLabel.textContent = 'No face data for this ID';
           logResult(data.message, 'error');
-          stopSession();
+          await stopSession();
           break;
 
         case 'match':
           scanLabel.textContent = `Recognised: ${data.name}`;
           logResult(data.message, data.already_done ? 'warn' : 'success');
-          // Stop after marking (success or already-done)
-          stopSession();
+          await stopSession();
           break;
       }
     } catch (_) { /* network hiccup — continue next cycle */ }
@@ -204,7 +202,6 @@ function initAttendance() {
     startBtn.disabled    = true;
     startBtn.textContent = 'Checking ID…';
 
-    // Test 1: verify UID exists before opening camera
     const check = await apiFetch('/api/check-uid', { uid });
     startBtn.textContent = 'Start Attendance';
 
@@ -214,7 +211,8 @@ function initAttendance() {
       return;
     }
 
-    // Open camera
+    currentUid = uid;
+
     try {
       cameraStream = await startCamera(video);
     } catch (e) {
@@ -228,24 +226,21 @@ function initAttendance() {
     stopBtn.style.display    = 'inline-flex';
     scanLabel.textContent    = 'Scanning for face…';
 
-    // 10 second hard timeout
-    timeoutTimer = setTimeout(() => {
+    // 30 second hard timeout (extended from 10s)
+    timeoutTimer = setTimeout(async () => {
       if (cameraStream) {
         scanLabel.textContent = 'Timeout: No face detected';
         logResult('Could not detect a face within the time limit. Please try again.', 'error');
-        stopSession();
+        await stopSession();
       }
-    }, 10000);
+    }, 30000);
 
-    // Run recognition every 1.5 s; also fire immediately after 1 s warm-up
-    recogTimer = setInterval(runFrame, 1500);
-    setTimeout(runFrame, 1000);
+    // Run recognition every 1s (faster than before); also fire after 800ms warm-up
+    recogTimer = setInterval(runFrame, 1000);
+    setTimeout(runFrame, 800);
   });
 
-  // Stop button
   stopBtn.addEventListener('click', stopSession);
-
-  // Clear error on typing
   uidInput.addEventListener('input', () => hideAlert(errEl));
 }
 
@@ -256,20 +251,19 @@ function initAttendance() {
 // Manager code must be rejected explicitly.
 // ═════════════════════════════════════════════════════════════════════════════
 function initRegister() {
-  const codeInput   = $('#reg-emp-code');
-  const codeErrEl   = $('#reg-code-err');
-  const detailsDiv  = $('#reg-details');
-  const openCamBtn  = $('#reg-open-cam-btn');
-  const camSection  = $('#reg-camera-section');
-  const captureBtn  = $('#reg-capture-btn');
-  const cancelBtn   = $('#reg-cancel-cam-btn');
-  const resultEl    = $('#reg-result');
-  const video       = $('#reg-video');
-  const canvas      = $('#reg-canvas');
-  let   cameraStream = null;
-  let   codeVerified = false;
+  const codeInput  = $('#reg-emp-code');
+  const codeErrEl  = $('#reg-code-err');
+  const detailsDiv = $('#reg-details');
+  const openCamBtn = $('#reg-open-cam-btn');
+  const camSection = $('#reg-camera-section');
+  const captureBtn = $('#reg-capture-btn');
+  const cancelBtn  = $('#reg-cancel-cam-btn');
+  const resultEl   = $('#reg-result');
+  const video      = $('#reg-video');
+  const canvas     = $('#reg-canvas');
+  let cameraStream = null;
+  let codeVerified = false;
 
-  // Show employee details section once a code is typed (before verifying)
   codeInput.addEventListener('input', () => {
     hideAlert(codeErrEl);
     hideAlert(resultEl);
@@ -277,7 +271,6 @@ function initRegister() {
     detailsDiv.style.display = codeInput.value.length > 0 ? 'block' : 'none';
   });
 
-  // "Open Camera" — verify code then open camera
   openCamBtn.addEventListener('click', async () => {
     const code = codeInput.value.trim();
     const uid  = $('#reg-uid').value.trim();
@@ -285,12 +278,15 @@ function initRegister() {
 
     hideAlert(codeErrEl);
 
-    if (!uid || !name) {
-      showAlert(codeErrEl, 'Please enter both Unique Employee ID and Full Name.');
+    if (!uid) {
+      showAlert(codeErrEl, 'Please enter the Unique Employee ID.');
+      return;
+    }
+    if (!name) {
+      showAlert(codeErrEl, 'Please enter the Employee Full Name.');
       return;
     }
 
-    // Verify employee access code server-side
     openCamBtn.disabled    = true;
     openCamBtn.textContent = 'Verifying…';
     const verify = await apiFetch('/api/verify-employee', { employee_code: code });
@@ -304,7 +300,6 @@ function initRegister() {
 
     codeVerified = true;
 
-    // Open camera
     try {
       cameraStream = await startCamera(video);
     } catch (e) {
@@ -316,7 +311,6 @@ function initRegister() {
     openCamBtn.style.display = 'none';
   });
 
-  // "Capture Face"
   captureBtn.addEventListener('click', async () => {
     if (!codeVerified) {
       showAlert(codeErrEl, 'Please verify your Employee Access Code first.');
@@ -327,10 +321,8 @@ function initRegister() {
     const name = $('#reg-name').value.trim();
     const code = codeInput.value.trim();
 
-    if (!uid || !name) {
-      showAlert(codeErrEl, 'Please enter Unique Employee ID and Full Name.');
-      return;
-    }
+    if (!uid) { showAlert(codeErrEl, 'Please enter the Unique Employee ID.'); return; }
+    if (!name) { showAlert(codeErrEl, 'Please enter the Employee Full Name.'); return; }
 
     captureBtn.disabled    = true;
     captureBtn.textContent = 'Processing…';
@@ -347,11 +339,9 @@ function initRegister() {
 
     if (data.success) {
       stopCamera(cameraStream); cameraStream = null;
-      cameraStream   = null;
-      codeVerified   = false;
+      codeVerified = false;
       camSection.style.display = 'none';
       openCamBtn.style.display = 'block';
-      // Reset form
       codeInput.value      = '';
       $('#reg-uid').value  = '';
       $('#reg-name').value = '';
@@ -359,7 +349,6 @@ function initRegister() {
     }
   });
 
-  // "Cancel" camera
   cancelBtn.addEventListener('click', () => {
     stopCamera(cameraStream); cameraStream = null;
     camSection.style.display = 'none';
@@ -370,13 +359,12 @@ function initRegister() {
 
 // ═════════════════════════════════════════════════════════════════════════════
 // PAGE 3: Admin Dashboard
-// Requires MANAGER ACCESS CODE only.
-// Employee Access Code returns a clear rejection message.
 // ═════════════════════════════════════════════════════════════════════════════
-let _managerCode  = '';
-let _searchData   = [];
-let _monthlyData  = [];
-let _todayData    = [];
+let _managerCode = '';
+let _searchData  = [];
+let _monthlyData = [];
+let _detailData  = { rows: [], days: [] };
+let _todayData   = [];
 
 function initDashboard() {
   const mgrInput = $('#dash-mgr-code');
@@ -398,15 +386,11 @@ function initDashboard() {
     authBtn.textContent = 'Unlock Dashboard';
 
     if (!data.success) {
-      // Shows "Manager access required. The Employee Access Code cannot unlock this page."
-      // if employee code was entered, or generic wrong-code message.
       showAlert(errEl, data.message || 'Incorrect Manager Access Code.');
       return;
     }
 
     _managerCode = code;
-
-    // Animated reveal
     authCard.style.cssText = 'opacity:0;transform:translateY(-8px);transition:all 0.28s ease;';
     setTimeout(() => {
       authCard.style.display = 'none';
@@ -422,13 +406,10 @@ function initDashboard() {
   $('#dash-lock-btn').addEventListener('click', () => {
     _managerCode = null;
     mgrInput.value = '';
-    
-    // Animated hide of content and reveal of auth card
     content.style.cssText = 'display:block;opacity:1;transform:translateY(0);transition:all 0.28s ease;';
     requestAnimationFrame(() => requestAnimationFrame(() => {
       content.style.opacity   = '0';
       content.style.transform = 'translateY(10px)';
-      
       setTimeout(() => {
         content.style.display = 'none';
         authCard.style.cssText = 'display:block;opacity:0;transform:translateY(-8px);transition:all 0.32s ease;';
@@ -466,8 +447,8 @@ function initDashboard() {
 
   searchBy.addEventListener('change', () => {
     const isDate = searchBy.value === 'date';
-    searchValWrap.style.display = isDate ? 'none'  : '';
-    dateRangeWrap.style.display = isDate ? 'flex'  : 'none';
+    searchValWrap.style.display = isDate ? 'none' : '';
+    dateRangeWrap.style.display = isDate ? 'flex' : 'none';
   });
 
   $('#search-btn').addEventListener('click', async () => {
@@ -488,36 +469,68 @@ function initDashboard() {
   $('#export-search-btn').addEventListener('click',
     () => exportCSV(_searchData, 'search_results.csv'));
 
-  // ── Monthly ──────────────────────────────────────────────
+  // ── Monthly Summary + Detail ─────────────────────────────
   $('#month-btn').addEventListener('click', async () => {
     const month = $('#month-input').value;
-    if (!month) return;
-    const data = await apiFetch('/api/dashboard/monthly', { manager_code: _managerCode, month });
-    _monthlyData = data.records || [];
+    if (!month) { alert('Please select a month first.'); return; }
+
+    // Reset UI
+    $('#monthly-summary-section').style.display = 'none';
+    $('#monthly-empty').style.display = 'none';
+    $('#monthly-table-wrap').innerHTML = '';
+    $('#monthly-detail-wrap').innerHTML = '';
+
+    // 1. Fetch totals summary
+    const sumData = await apiFetch('/api/dashboard/monthly', { manager_code: _managerCode, month });
+    _monthlyData = sumData.records || [];
+
+    // 2. Fetch day-by-day detail
+    const detData = await apiFetch('/api/dashboard/monthly-detail', { manager_code: _managerCode, month });
+    _detailData = { rows: detData.rows || [], days: detData.days || [] };
+
+    const hasData = _monthlyData.length > 0 || _detailData.rows.length > 0;
+
+    if (!hasData) {
+      $('#monthly-empty').style.display = 'block';
+      return;
+    }
+
+    $('#monthly-summary-section').style.display = 'block';
+
+    // Render totals table
     renderTable(_monthlyData, $('#monthly-table-wrap'));
-    $('#export-month-btn').style.display = _monthlyData.length ? '' : 'none';
+
+    // Render day-by-day detail table
+    renderMonthlyDetail(_detailData.rows, _detailData.days, $('#monthly-detail-wrap'));
   });
 
   $('#export-month-btn').addEventListener('click', () => {
-    exportCSV(_monthlyData, `summary_${$('#month-input').value || 'export'}.csv`);
+    exportCSV(_monthlyData, `monthly_summary_${$('#month-input').value || 'export'}.csv`);
   });
+
+  $('#export-detail-btn').addEventListener('click', () => {
+    exportMonthlyDetailCSV(_detailData.rows, _detailData.days,
+      `monthly_detail_${$('#month-input').value || 'export'}.csv`);
+  });
+
   // ── Leaves ──────────────────────────────────────────────
   async function loadLeavesData() {
     const data = await apiFetch('/api/dashboard/leaves', { manager_code: _managerCode });
     if (data.success) renderTable(data.records || [], $('#leaves-table-wrap'));
   }
-  
+
   $('#add-leave-btn').addEventListener('click', async () => {
-    const uid = $('#leave-uid').value.trim();
+    const uid  = $('#leave-uid').value.trim();
     const date = $('#leave-date').value;
     const type = $('#leave-type').value;
-    if (!uid || !date) { alert('Please provide UID and Date.'); return; }
-    
+    if (!uid || !date) { alert('Please provide Employee ID and Date.'); return; }
+
     const btn = $('#add-leave-btn');
     btn.disabled = true;
-    const res = await apiFetch('/api/dashboard/leaves/add', { manager_code: _managerCode, uid, date, leave_type: type });
+    const res = await apiFetch('/api/dashboard/leaves/add',
+      { manager_code: _managerCode, uid, date, leave_type: type });
     if (res.success) {
-      alert('Leave/Holiday added successfully.');
+      alert('Leave record added successfully.');
       loadLeavesData();
     } else {
       alert(res.message || 'Error adding leave.');
@@ -530,33 +543,32 @@ function initDashboard() {
     const data = await apiFetch('/api/dashboard/employees', { manager_code: _managerCode });
     if (data.success) renderEmployeesTable(data.records || [], $('#employees-table-wrap'));
   }
-  
-  // Custom render for employees to add edit/delete buttons
+
   function renderEmployeesTable(records, wrap) {
     if (!records || records.length === 0) {
-      wrap.innerHTML = '<div class="alert" style="display:block">No employees found.</div>';
+      wrap.innerHTML = '<div class="empty-state"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="display:block;margin:0 auto 10px;opacity:.35"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>No employees found.</div>';
       return;
     }
-    const cols = Object.keys(records[0]);
+    const cols  = Object.keys(records[0]);
     const heads = cols.map(c => `<th>${fmtCol(c)}</th>`).join('') + '<th>Actions</th>';
-    const rows = records.map(r => {
+    const rows  = records.map(r => {
       const cells = cols.map(c => `<td>${r[c]}</td>`).join('');
-      const acts = `<td>
-        <button class="btn btn-outline btn-sm edit-emp-btn" data-uid="${r.unique_id}" data-name="${r.name}" style="padding:4px 8px; font-size:11px">Edit</button>
-        <button class="btn btn-primary btn-sm del-emp-btn" data-uid="${r.unique_id}" style="padding:4px 8px; font-size:11px; background:var(--red); border-color:var(--red)">Delete</button>
+      const acts  = `<td>
+        <button class="btn btn-outline btn-sm edit-emp-btn" data-uid="${r.unique_id}" data-name="${r.name}" style="padding:4px 8px;font-size:11px;margin-right:4px">Edit</button>
+        <button class="btn btn-sm del-emp-btn" data-uid="${r.unique_id}" style="padding:4px 8px;font-size:11px;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer">Delete</button>
       </td>`;
       return `<tr>${cells}${acts}</tr>`;
     }).join('');
     wrap.innerHTML = `<div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table></div>`;
-    
-    // Bind actions
+
     wrap.querySelectorAll('.edit-emp-btn').forEach(b => {
       b.addEventListener('click', async () => {
-        const uid = b.dataset.uid;
+        const uid     = b.dataset.uid;
         const oldName = b.dataset.name;
         const newName = prompt(`Enter new name for ${uid}:`, oldName);
         if (newName && newName !== oldName) {
-          const res = await apiFetch('/api/dashboard/employees/update', { manager_code: _managerCode, uid, new_name: newName });
+          const res = await apiFetch('/api/dashboard/employees/update',
+            { manager_code: _managerCode, uid, new_name: newName });
           if (res.success) loadEmployeesData();
           else alert('Error updating employee.');
         }
@@ -565,8 +577,9 @@ function initDashboard() {
     wrap.querySelectorAll('.del-emp-btn').forEach(b => {
       b.addEventListener('click', async () => {
         const uid = b.dataset.uid;
-        if (confirm(`Are you sure you want to delete employee ${uid}? This will also delete their face data.`)) {
-          const res = await apiFetch('/api/dashboard/employees/delete', { manager_code: _managerCode, uid });
+        if (confirm(`Delete employee ${uid}? This will also delete their face data and cannot be undone.`)) {
+          const res = await apiFetch('/api/dashboard/employees/delete',
+            { manager_code: _managerCode, uid });
           if (res.success) loadEmployeesData();
           else alert('Error deleting employee.');
         }
@@ -574,26 +587,24 @@ function initDashboard() {
     });
   }
 
-  // Hook into tab clicks to load data lazily
+  // Lazy load tab data on click
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (btn.dataset.tab === 'leaves') loadLeavesData();
+      if (btn.dataset.tab === 'leaves')    loadLeavesData();
       if (btn.dataset.tab === 'employees') loadEmployeesData();
+      if (btn.dataset.tab === 'today')     loadTodayData();
     });
   });
 }
 
-// ── Table rendering ───────────────────────────────────────────────────────────
+// ── Generic Table rendering ───────────────────────────────────────────────────
 function renderTable(records, wrap) {
   if (!records || records.length === 0) {
-    wrap.innerHTML = `
-      <div class="empty-state">
-        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
-             style="display:block;margin:0 auto 10px;opacity:.35">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-        </svg>
-        No records found.
-      </div>`;
+    wrap.innerHTML = `<div class="empty-state">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+           style="display:block;margin:0 auto 10px;opacity:.35">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>No records found.</div>`;
     return;
   }
   const cols  = Object.keys(records[0]);
@@ -605,16 +616,69 @@ function renderTable(records, wrap) {
     }).join('');
     return `<tr>${cells}</tr>`;
   }).join('');
-
-  wrap.innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr>${heads}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+  wrap.innerHTML = `<div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
+// ── Monthly Day-by-Day Detail Table ──────────────────────────────────────────
+function renderMonthlyDetail(rows, days, wrap) {
+  if (!rows || rows.length === 0 || !days || days.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">No employee records to display.</div>';
+    return;
+  }
+
+  // Column headers: Name | UID | Day1 | Day2 … | P | L | A | I
+  const dayHeaders = days.map(d => {
+    const num = d.slice(8); // day number e.g. "09"
+    return `<th class="day-col">${parseInt(num, 10)}</th>`;
+  }).join('');
+
+  const thead = `<tr>
+    <th style="min-width:130px">Name</th>
+    <th style="min-width:80px">ID</th>
+    ${dayHeaders}
+    <th class="total-col" title="Present">P</th>
+    <th class="total-col" title="Late">L</th>
+    <th class="total-col" title="Absent">A</th>
+    <th class="total-col" title="Incomplete">I</th>
+  </tr>`;
+
+  const tbody = rows.map(emp => {
+    const dayCells = days.map(d => {
+      const s = emp.days[d] || '-';
+      const cls = { P:'dc-p', L:'dc-l', A:'dc-a', I:'dc-i', OL:'dc-ol' }[s] || '';
+      return `<td class="day-cell ${cls}">${s}</td>`;
+    }).join('');
+    const t = emp.totals;
+    return `<tr>
+      <td style="font-weight:600;color:var(--ink)">${emp.name}</td>
+      <td style="color:var(--ink-muted);font-size:12px">${emp.uid}</td>
+      ${dayCells}
+      <td class="total-cell tc-p">${t.present}</td>
+      <td class="total-cell tc-l">${t.late}</td>
+      <td class="total-cell tc-a">${t.absent}</td>
+      <td class="total-cell tc-i">${t.incomplete}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="detail-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+// ── Monthly Detail CSV export ─────────────────────────────────────────────────
+function exportMonthlyDetailCSV(rows, days, filename) {
+  if (!rows || !rows.length) return;
+  const dayNums = days.map(d => parseInt(d.slice(8), 10));
+  const header  = ['Name', 'ID', ...dayNums, 'Present', 'Late', 'Absent', 'Incomplete'];
+  const csvRows = rows.map(emp => {
+    const dayCols = days.map(d => emp.days[d] || '-');
+    const t = emp.totals;
+    return [emp.name, emp.uid, ...dayCols, t.present, t.late, t.absent, t.incomplete]
+      .map(v => `"${v}"`).join(',');
+  });
+  const blob = new Blob([[header.join(','), ...csvRows].join('\n')], { type: 'text/csv' });
+  Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename }).click();
+}
+
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 function fmtCol(k) {
   return k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
@@ -625,7 +689,6 @@ function statusBadge(s) {
   return `<span class="badge ${cls}">${s || '—'}</span>`;
 }
 
-// ── CSV export ─────────────────────────────────────────────────────────────────
 function exportCSV(data, filename) {
   if (!data || !data.length) return;
   const cols = Object.keys(data[0]);

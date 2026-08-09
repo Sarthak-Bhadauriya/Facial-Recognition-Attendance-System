@@ -24,8 +24,8 @@ def now_ist():
 # ── Backend logic (all unchanged) ─────────────────────────────────────────────
 from register import perform_registration_from_frame
 from attendance import process_attendance
-from face_utils import recognize_frame_for_uid
-from dashboard import get_today_attendance_df, search_attendance_df, get_monthly_summary_df
+from face_utils import recognize_frame_for_uid, reset_liveness
+from dashboard import get_today_attendance_df, search_attendance_df, get_monthly_summary_df, get_monthly_detail_df
 from config import verify_manager_password, verify_employee_password
 import storage
 
@@ -126,7 +126,7 @@ def api_process_frame():
     if result == 'no_encoding':
         return jsonify({
             'result':  'no_encoding',
-            'message': 'No face encoding found for this ID. Please re-register.',
+            'message': 'No face encoding found for this ID. Please complete registration first.',
         })
 
     # result == 'match' → mark attendance only when liveness is confirmed
@@ -139,6 +139,16 @@ def api_process_frame():
         'message':      msg,
         'already_done': already_done,
     })
+
+
+@app.route('/api/reset-liveness', methods=['POST'])
+def api_reset_liveness():
+    """Called by the frontend when camera session ends to clear liveness state."""
+    data = request.get_json() or {}
+    uid  = str(data.get('uid', '')).strip()
+    if uid:
+        reset_liveness(uid)
+    return jsonify({'success': True})
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -309,6 +319,17 @@ def api_dash_monthly():
     df = get_monthly_summary_df(data.get('month', ''))
     records = [] if df.empty else df.fillna('').to_dict(orient='records')
     return jsonify({'success': True, 'records': records})
+
+
+@app.route('/api/dashboard/monthly-detail', methods=['POST'])
+def api_dash_monthly_detail():
+    """Return day-by-day attendance breakdown for every employee in a month."""
+    data = request.get_json()
+    if not verify_manager_password(data.get('manager_code', '')):
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+
+    rows, all_days = get_monthly_detail_df(data.get('month', ''))
+    return jsonify({'success': True, 'rows': rows, 'days': all_days})
 
 # ── Manage Employees Endpoints ──────────────────────────────────────────────
 @app.route('/api/dashboard/employees', methods=['POST'])

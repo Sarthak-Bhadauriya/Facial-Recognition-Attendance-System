@@ -7,7 +7,7 @@
   <meta name="description" content="Attend-X — Face Recognition Based Employee Attendance System." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=2" />
+  <link rel="stylesheet" href="/static/style.css?v=4" />
 </head>
 <body>
 
@@ -86,11 +86,11 @@
             <p class="card-sub">Enter your Unique Employee ID, then start the camera. Your face will be verified against the ID you entered before attendance is marked.</p>
           </div>
 
-          <!-- Unique ID input -->
+          <!-- Unique ID input — no format restriction -->
           <div class="form-group">
             <label class="form-label" for="att-uid">Unique Employee ID</label>
             <input class="form-input" type="text" id="att-uid"
-                   placeholder="Enter Your Unique Employee ID" autocomplete="off"/>
+                   placeholder="Enter your Unique Employee ID (any format)" autocomplete="off"/>
           </div>
           <div id="att-uid-err" class="alert alert-error" style="display:none"></div>
 
@@ -106,7 +106,7 @@
             </button>
           </div>
 
-          <!-- Live camera feed -->
+          <!-- Live camera feed — NO circular guide overlay on attendance -->
           <div id="att-camera-section" style="display:none; margin-top:18px">
             <div class="camera-wrap">
               <video id="att-video" class="camera-feed" autoplay playsinline muted></video>
@@ -146,13 +146,14 @@
           </div>
           <div id="reg-code-err" class="alert alert-error" style="display:none"></div>
 
-          <!-- Step 2: Employee details (revealed after code verified) -->
+          <!-- Step 2: Employee details -->
           <div id="reg-details" style="display:none">
             <div class="divider"></div>
             <div class="form-group">
               <label class="form-label" for="reg-uid">Unique Employee ID</label>
               <input class="form-input" type="text" id="reg-uid"
-                     placeholder="e.g. EMP-001" autocomplete="off"/>
+                     placeholder="Any format — numbers, letters or mix (e.g. 101, Sar18, EMP-01)" autocomplete="off"/>
+              <span style="font-size:12px; color:var(--ink-faint); margin-top:4px;">Cannot be empty or duplicate an existing ID.</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="reg-name">Employee Full Name</label>
@@ -165,7 +166,7 @@
             </button>
           </div>
 
-          <!-- Step 3: Camera capture -->
+          <!-- Step 3: Camera capture — NO circular guide overlay -->
           <div id="reg-camera-section" style="display:none">
             <div class="divider"></div>
             <p class="form-label" style="margin-bottom:10px">
@@ -174,9 +175,7 @@
             <div class="camera-wrap">
               <video id="reg-video" class="camera-feed" autoplay playsinline muted></video>
               <canvas id="reg-canvas" style="display:none"></canvas>
-              <div class="camera-overlay">
-                <div class="face-guide"></div>
-              </div>
+              <!-- No face-guide overlay — full frame detection -->
             </div>
             <div class="btn-row" style="margin-top:14px">
               <button class="btn btn-primary" id="reg-capture-btn">
@@ -217,7 +216,7 @@
 
         <!-- Dashboard content -->
         <div id="dash-content" style="display:none">
-          
+
           <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
             <button class="btn btn-outline btn-sm" id="dash-lock-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -249,7 +248,6 @@
             </div>
           </div>
 
-
           <!-- Tabs -->
           <div class="tab-bar">
             <button class="tab-btn active" data-tab="today">Today's Roster</button>
@@ -259,6 +257,7 @@
             <button class="tab-btn" data-tab="employees">Employees</button>
           </div>
 
+          <!-- Today's Roster -->
           <div class="tab-panel active" id="tab-today">
             <div class="card">
               <div class="table-toolbar">
@@ -269,6 +268,7 @@
             </div>
           </div>
 
+          <!-- Search Records -->
           <div class="tab-panel" id="tab-search">
             <div class="card">
               <h3 class="section-title" style="margin-bottom:18px">Search Historical Records</h3>
@@ -305,9 +305,10 @@
             </div>
           </div>
 
+          <!-- Monthly Summary — totals + day-by-day detail -->
           <div class="tab-panel" id="tab-monthly">
             <div class="card">
-              <h3 class="section-title" style="margin-bottom:18px">Monthly Performance Summary</h3>
+              <h3 class="section-title" style="margin-bottom:18px">Monthly Attendance Report</h3>
               <div class="form-row">
                 <div class="form-group flex1">
                   <label class="form-label" for="month-input">Select Month</label>
@@ -317,19 +318,40 @@
                   <button class="btn btn-primary" id="month-btn">Generate Report</button>
                 </div>
               </div>
-              <div class="btn-row">
-                <button class="btn btn-outline btn-sm" id="export-month-btn" style="display:none">Export CSV</button>
+
+              <!-- Summary totals -->
+              <div id="monthly-summary-section" style="display:none">
+                <div class="table-toolbar" style="margin-top:10px">
+                  <h4 class="section-title" style="font-size:14px">Monthly Totals</h4>
+                  <button class="btn btn-outline btn-sm" id="export-month-btn">Export Totals CSV</button>
+                </div>
+                <div id="monthly-table-wrap"></div>
+
+                <!-- Day-by-day detail -->
+                <div class="table-toolbar" style="margin-top:28px">
+                  <h4 class="section-title" style="font-size:14px">Day-by-Day Breakdown
+                    <span style="font-size:11px; font-weight:500; color:var(--ink-faint); margin-left:8px;">P=Present &nbsp; L=Late &nbsp; A=Absent &nbsp; I=Incomplete &nbsp; OL=On Leave &nbsp; -=No record</span>
+                  </h4>
+                  <button class="btn btn-outline btn-sm" id="export-detail-btn">Export Detail CSV</button>
+                </div>
+                <div id="monthly-detail-wrap" class="table-wrap"></div>
               </div>
-              <div id="monthly-table-wrap" class="mt-16"></div>
+
+              <div id="monthly-empty" style="display:none" class="empty-state">
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="display:block;margin:0 auto 10px;opacity:.35"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                No records found for the selected month.
+              </div>
             </div>
           </div>
+
+          <!-- Manage Leaves -->
           <div class="tab-panel" id="tab-leaves">
             <div class="card">
-              <h3 class="section-title" style="margin-bottom:18px">Manage Leaves & Holidays</h3>
+              <h3 class="section-title" style="margin-bottom:18px">Manage Leaves &amp; Holidays</h3>
               <div class="form-row">
                 <div class="form-group flex1">
                   <label class="form-label" for="leave-uid">Unique Employee ID</label>
-                  <input class="form-input" type="text" id="leave-uid" placeholder="e.g. EMP-001 (or ALL for Holiday)"/>
+                  <input class="form-input" type="text" id="leave-uid" placeholder="Enter Employee ID (or ALL for Company Holiday)"/>
                 </div>
                 <div class="form-group flex1">
                   <label class="form-label" for="leave-date">Date</label>
@@ -350,12 +372,14 @@
             </div>
           </div>
 
+          <!-- Employees -->
           <div class="tab-panel" id="tab-employees">
             <div class="card">
               <h3 class="section-title" style="margin-bottom:18px">Manage Employees</h3>
               <div id="employees-table-wrap" class="mt-16"></div>
             </div>
           </div>
+
         </div><!-- /dash-content -->
       </div><!-- /card-wrap -->
     </section>
@@ -366,6 +390,6 @@
     <p>Attend-X &mdash; Face Recognition Attendance Platform &copy; 2026</p>
   </footer>
 
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>
