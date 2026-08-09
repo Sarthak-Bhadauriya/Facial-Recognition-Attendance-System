@@ -12,8 +12,14 @@ import base64
 import threading
 import webbrowser
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import pandas as pd
+
+# Indian Standard Time = UTC + 5:30
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def now_ist():
+    return datetime.now(IST)
 
 # ── Backend logic (all unchanged) ─────────────────────────────────────────────
 from register import perform_registration_from_frame
@@ -107,6 +113,10 @@ def api_process_frame():
     if result == 'no_face':
         return jsonify({'result': 'no_face', 'message': ''})
 
+    # Liveness check pending — face matched but blink not yet detected
+    if result == 'liveness_pending':
+        return jsonify({'result': 'liveness_pending', 'message': name})
+
     if result == 'mismatch':
         return jsonify({
             'result':  'mismatch',
@@ -119,7 +129,7 @@ def api_process_frame():
             'message': 'No face encoding found for this ID. Please re-register.',
         })
 
-    # result == 'match' → mark attendance
+    # result == 'match' → mark attendance only when liveness is confirmed
     msg          = process_attendance(target_uid, name)
     already_done = 'already completed' in msg.lower()
 
@@ -231,7 +241,7 @@ def api_dash_today():
     late      = 0
     on_leave  = 0
     
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = now_ist().strftime("%Y-%m-%d")
     leaves_today = leaves_df[leaves_df['date'] == today_str]['unique_id'].astype(str).tolist() if not leaves_df.empty else []
 
     if not df.empty:
@@ -272,54 +282,6 @@ def api_dash_today():
         'metrics': {'total': total_emp, 'present': present, 'late': late, 'absent': absent, 'on_leave': on_leave},
         'records': records,
     })
-
-
-@app.route('/api/dashboard/ai-summary', methods=['POST'])
-def api_dash_ai_summary():
-    data = request.get_json()
-    if not verify_manager_password(data.get('manager_code', '')):
-        return jsonify({'success': False, 'message': 'Unauthorized'})
-
-    try:
-        import google.generativeai as genai
-        from config import GEMINI_API_KEY
-        
-        if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_API_KEY_HERE":
-            return jsonify({'success': False, 'message': 'API Key not configured in config.py.'})
-
-        # Set up Gemini
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-
-        # Get metrics
-        df = get_today_attendance_df()
-        employees = storage.load_employees()
-        total_emp = len(employees)
-        present = len(df[df['status'].isin(['Present', 'Late'])]) if not df.empty else 0
-        late = len(df[df['status'] == 'Late']) if not df.empty else 0
-        
-        late_names = ""
-        if late > 0:
-            late_names = ", ".join(df[df['status'] == 'Late']['name'].tolist())
-
-        absent_names = ""
-        if not df.empty:
-            present_uids = df['unique_id'].astype(str).tolist()
-            absent_df = employees[~employees['unique_id'].astype(str).isin(present_uids)]
-            absent_names = ", ".join(absent_df['name'].tolist())
-        else:
-            absent_names = ", ".join(employees['name'].tolist())
-
-        prompt = (f"You are a professional HR Assistant. Write a concise, 3-line daily attendance summary. "
-                  f"Total Employees: {total_emp}. Present: {present}. Late: {late}. "
-                  f"Late employees: {late_names}. Absent employees: {absent_names}. "
-                  f"Do not use markdown formatting, keep it plain text and very brief.")
-
-        response = model.generate_content(prompt)
-        
-        return jsonify({'success': True, 'summary': response.text})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
 
 
 @app.route('/api/dashboard/search', methods=['POST'])

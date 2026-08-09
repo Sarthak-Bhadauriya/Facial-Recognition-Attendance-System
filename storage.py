@@ -1,7 +1,14 @@
 import os
 import pandas as pd
 import pickle
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# Indian Standard Time = UTC + 5:30
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def now_ist():
+    """Return current datetime in IST."""
+    return datetime.now(IST)
 
 EMPLOYEES_FILE = 'employees.csv'
 ENCODINGS_FILE = 'face_encodings.pkl'
@@ -40,7 +47,7 @@ def save_employee(unique_id, name):
     if unique_id in df['unique_id'].astype(str).values or unique_id in df['unique_id'].values:
         raise ValueError(f"Employee with ID {unique_id} already exists.")
     
-    registered_on = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    registered_on = now_ist().strftime("%Y-%m-%d %H:%M:%S")
     new_employee = pd.DataFrame([{
         'unique_id': unique_id, 
         'name': name, 
@@ -102,7 +109,7 @@ def save_attendance_record(row):
 
 def get_today_record(unique_id):
     df = load_attendance()
-    today_date = datetime.now().strftime("%Y-%m-%d")
+    today_date = now_ist().strftime("%Y-%m-%d")
     
     # Filter by unique_id and today's date
     df['unique_id'] = df['unique_id'].astype(str)
@@ -115,7 +122,7 @@ def get_today_record(unique_id):
 
 def update_today_record(unique_id, updated_data):
     df = load_attendance()
-    today_date = datetime.now().strftime("%Y-%m-%d")
+    today_date = now_ist().strftime("%Y-%m-%d")
     df['unique_id'] = df['unique_id'].astype(str)
     
     mask = (df['unique_id'] == str(unique_id)) & (df['date'] == today_date)

@@ -1,8 +1,6 @@
 import hashlib
 
-# ── Generative AI (Gemini) ──────────────────────────────────────────────────
-# Get your free API key at: https://aistudio.google.com/app/apikey
-GEMINI_API_KEY = "AQ.Ab8RN6JWryMw66CRtqR-G8BZmsBXMrp1AEbWp4PeP9GDk2jrqQ"
+
 
 # Default Passwords (In a real application, these should be loaded from environment variables)
 # We store them as hashes.

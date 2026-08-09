@@ -1,8 +1,14 @@
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from storage import get_today_record, save_attendance_record, update_today_record, load_attendance, ATTENDANCE_FILE
 from config import SHIFT_START_TIME, LATE_GRACE_MINS, SHIFT_END_TIME
-from datetime import timedelta
+
+# Indian Standard Time = UTC + 5:30
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def now_ist():
+    """Return current datetime in IST."""
+    return datetime.now(IST)
 
 def process_attendance(unique_id, name):
     """
@@ -12,9 +18,10 @@ def process_attendance(unique_id, name):
     if unique_id == "Unknown":
         return "Face not registered. Please register first using your Unique ID and password before marking attendance."
         
-    today_date = datetime.now().strftime("%Y-%m-%d")
-    current_time_str = datetime.now().strftime("%H:%M:%S")
-    current_time_obj = datetime.now().time()
+    now = now_ist()
+    today_date = now.strftime("%Y-%m-%d")
+    current_time_str = now.strftime("%H:%M:%S")
+    current_time_obj = now.time()
     
     record = get_today_record(unique_id)
     
@@ -73,7 +80,7 @@ def finalize_incomplete_attendance():
     marks "Incomplete" for anyone who clocked in but never clocked out.
     """
     df = load_attendance()
-    today_date = datetime.now().strftime("%Y-%m-%d")
+    today_date = now_ist().strftime("%Y-%m-%d")
     
     mask = (df['date'] == today_date) & (df['time_out'].isna() | (df['time_out'] == ""))
     

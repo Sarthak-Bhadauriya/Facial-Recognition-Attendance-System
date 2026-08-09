@@ -176,7 +176,7 @@ st.markdown("""
     
     <div style="position: relative; z-index: 1;">
         <h1 style="color: white; margin: 0 0 10px 0; font-size: 42px; font-weight: 800; letter-spacing: -1px; display: flex; align-items: center;">
-            <span style="font-size: 46px; margin-right: 15px; text-shadow: 0 0 20px rgba(255,255,255,0.4);">✨</span> Attend-X
+            Attend-X
         </h1>
         <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 18px; font-weight: 400; letter-spacing: 0.5px;">Next-Generation Face Recognition Attendance</p>
     </div>
@@ -189,47 +189,47 @@ st.markdown("""
 
 # Left Sidebar Navigation Menu
 menu = st.sidebar.radio("MAIN NAVIGATION", [
-    "🧑‍💼 Register New Employee", 
-    "🎥 Mark Attendance", 
-    "📊 Admin Dashboard", 
-    "🚪 Exit"
+    "Register New Employee", 
+    "Mark Attendance", 
+    "Admin Dashboard", 
+    "Exit"
 ])
 
-if menu == "🧑‍💼 Register New Employee":
+if menu == "Register New Employee":
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         with st.container(border=True):
             st.markdown("<h3 style='text-align: center; color: #0b1d3a; padding-bottom: 10px;'>Register New Employee</h3>", unsafe_allow_html=True)
-            admin_pwd = st.text_input("🔑 Enter Manager Access Code", type="password")
+            admin_pwd = st.text_input("Enter Manager Access Code", type="password")
             
             if admin_pwd: 
                 st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
-                uid = st.text_input("🆔 Unique ID")
-                name = st.text_input("👤 Full Name")
+                uid = st.text_input("Unique ID")
+                name = st.text_input("Full Name")
                 
                 st.write("")
-                if st.button("📸 Open Camera & Register", type="primary", use_container_width=True):
+                if st.button("Open Camera & Register", type="primary", use_container_width=True):
                     with st.spinner("Opening secure camera window... Please look at the camera and press 'c' to capture."):
                         success, msg = perform_registration(admin_pwd, uid, name)
                         if success:
-                            st.success(f"✅ {msg}")
+                            st.success(msg)
                         else:
-                            st.error(f"❌ {msg}")
+                            st.error(msg)
 
-elif menu == "🎥 Mark Attendance":
+elif menu == "Mark Attendance":
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         with st.container(border=True):
             st.markdown("<h3 style='text-align: center; color: #0b1d3a; padding-bottom: 10px;'>Live Attendance Scanner</h3>", unsafe_allow_html=True)
             
-            emp_pwd_input = st.text_input("🔑 Enter Employee Access Code", type="password")
+            emp_pwd_input = st.text_input("Enter Employee Access Code", type="password")
             from config import verify_employee_password
             
             st.write("")
             if emp_pwd_input:
                 if verify_employee_password(emp_pwd_input):
-                    if st.button("🟢 Start Camera and Mark Attendance", type="primary", use_container_width=True):
-                        st.info("📷 Live camera feed opening in a secure window. Press 'q' in the window to stop.")
+                    if st.button("Start Camera and Mark Attendance", type="primary", use_container_width=True):
+                        st.info("Live camera feed opening in a secure window. Press 'q' in the window to stop.")
                         
                         msg_placeholder = st.empty()
                         
@@ -237,26 +237,26 @@ elif menu == "🎥 Mark Attendance":
                         for unique_id, name in recognize_faces_continuous():
                             result_msg = process_attendance(unique_id, name)
                             if "successfully" in result_msg or "already completed" in result_msg:
-                                msg_placeholder.success(f"✅ {result_msg}")
+                                msg_placeholder.success(result_msg)
                             elif "Face not registered" in result_msg:
-                                msg_placeholder.error(f"❌ {result_msg}")
+                                msg_placeholder.error(result_msg)
                             else:
-                                msg_placeholder.warning(f"⚠️ {result_msg}")
+                                msg_placeholder.warning(result_msg)
                                 
-                        st.success("✅ Camera closed successfully.")
+                        st.success("Camera closed successfully.")
                 else:
-                    st.error("❌ Incorrect Employee Access Code")
+                    st.error("Incorrect Employee Access Code")
 
-elif menu == "📊 Admin Dashboard":
+elif menu == "Admin Dashboard":
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        admin_pwd_dash = st.text_input("🔑 Enter Manager Access Code", type="password")
+        admin_pwd_dash = st.text_input("Enter Manager Access Code", type="password")
     
     from config import verify_manager_password, verify_employee_password
     
     if admin_pwd_dash:
         if verify_manager_password(admin_pwd_dash):
-            st.success("✅ Access Granted")
+            st.success("Access Granted")
             
             # KPI Metric Cards
             total_emp = len(storage.load_employees())
@@ -270,13 +270,13 @@ elif menu == "📊 Admin Dashboard":
             absent_today = total_emp - present_today
             
             m1, m2, m3, m4 = st.columns(4)
-            m1.markdown(f'<div class="glass-card"><div class="glass-icon">👥</div><div class="glass-value">{total_emp}</div><div class="glass-label">Total Employees</div></div>', unsafe_allow_html=True)
-            m2.markdown(f'<div class="glass-card glass-card-present"><div class="glass-icon">✅</div><div class="glass-value">{present_today}</div><div class="glass-label">Present Today</div></div>', unsafe_allow_html=True)
-            m3.markdown(f'<div class="glass-card glass-card-late"><div class="glass-icon">⚠️</div><div class="glass-value">{late_today}</div><div class="glass-label">Late Today</div></div>', unsafe_allow_html=True)
-            m4.markdown(f'<div class="glass-card glass-card-absent"><div class="glass-icon">❌</div><div class="glass-value">{absent_today}</div><div class="glass-label">Absent Today</div></div>', unsafe_allow_html=True)
+            m1.markdown(f'<div class="glass-card"><div class="glass-value">{total_emp}</div><div class="glass-label">Total Employees</div></div>', unsafe_allow_html=True)
+            m2.markdown(f'<div class="glass-card glass-card-present"><div class="glass-value">{present_today}</div><div class="glass-label">Present Today</div></div>', unsafe_allow_html=True)
+            m3.markdown(f'<div class="glass-card glass-card-late"><div class="glass-value">{late_today}</div><div class="glass-label">Late Today</div></div>', unsafe_allow_html=True)
+            m4.markdown(f'<div class="glass-card glass-card-absent"><div class="glass-value">{absent_today}</div><div class="glass-label">Absent Today</div></div>', unsafe_allow_html=True)
             
             # Data Views
-            dash_tabs = st.tabs(["📅 Today's Attendance", "🔍 Search Records", "📈 Monthly Summary"])
+            dash_tabs = st.tabs(["Today's Attendance", "Search Records", "Monthly Summary"])
             
             with dash_tabs[0]:
                 with st.container(border=True):
@@ -286,7 +286,7 @@ elif menu == "📊 Admin Dashboard":
                     else:
                         st.dataframe(df_today, use_container_width=True)
                         csv = df_today.to_csv(index=False).encode('utf-8')
-                        st.download_button("📥 Export Today's Data to Excel/CSV", csv, "today_attendance.csv", "text/csv", type="primary")
+                        st.download_button("Export Today's Data to CSV", csv, "today_attendance.csv", "text/csv", type="primary")
                     
             with dash_tabs[1]:
                 with st.container(border=True):
@@ -312,7 +312,7 @@ elif menu == "📊 Admin Dashboard":
                     if not df_search.empty:
                         st.dataframe(df_search, use_container_width=True)
                         csv_s = df_search.to_csv(index=False).encode('utf-8')
-                        st.download_button("📥 Export Search Results", csv_s, "search_results.csv", "text/csv", type="primary")
+                        st.download_button("Export Search Results", csv_s, "search_results.csv", "text/csv", type="primary")
                     
             with dash_tabs[2]:
                 with st.container(border=True):
@@ -325,16 +325,16 @@ elif menu == "📊 Admin Dashboard":
                         else:
                             st.dataframe(df_month, use_container_width=True)
                             csv_m = df_month.to_csv(index=False).encode('utf-8')
-                            st.download_button("📥 Export Monthly Summary", csv_m, f"summary_{month_input}.csv", "text/csv", type="primary")
+                            st.download_button("Export Monthly Summary", csv_m, f"summary_{month_input}.csv", "text/csv", type="primary")
                         
         elif verify_employee_password(admin_pwd_dash):
-            st.error("❌ Manager access required to view this page.")
+            st.error("Manager access required to view this page.")
         else:
-            st.error("❌ Access Denied. Incorrect Manager Access Code.")
+            st.error("Access Denied. Incorrect Manager Access Code.")
 
-elif menu == "🚪 Exit":
+elif menu == "Exit":
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         with st.container(border=True):
             st.markdown("<h3 style='text-align: center; color: #0b1d3a;'>Exit System</h3>", unsafe_allow_html=True)
-            st.info("👋 You can safely close this browser tab to exit the dashboard. To fully stop the backend server, press Ctrl+C in your terminal.")
+            st.info("You can safely close this browser tab to exit the dashboard. To fully stop the backend server, press Ctrl+C in your terminal.")

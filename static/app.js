@@ -459,44 +459,6 @@ function initDashboard() {
   $('#export-today-btn').addEventListener('click',
     () => exportCSV(_todayData, 'today_attendance.csv'));
 
-  // ── AI Summary ───────────────────────────────────────────────
-  const aiBtn = $('#btn-ai-summary');
-  const aiBox = $('#ai-summary-box');
-  const aiContent = $('#ai-summary-content');
-
-  if (aiBtn) {
-    aiBtn.addEventListener('click', async () => {
-      if (!_managerCode) return;
-      aiBtn.disabled = true;
-      aiBtn.innerHTML = '✨ Generating...';
-      aiBox.style.display = 'block';
-      aiContent.textContent = 'Thinking...';
-
-      const data = await apiFetch('/api/dashboard/ai-summary', { manager_code: _managerCode });
-      
-      aiBtn.disabled = false;
-      aiBtn.innerHTML = '✨ Generate AI Daily Summary';
-
-      if (!data.success) {
-        aiContent.innerHTML = `<span style="color:var(--danger)">Error: ${data.message}</span>`;
-        return;
-      }
-
-      // Typing effect
-      aiContent.textContent = '';
-      const text = data.summary;
-      let i = 0;
-      function typeChar() {
-        if (i < text.length) {
-          aiContent.textContent += text.charAt(i);
-          i++;
-          setTimeout(typeChar, 20); // 20ms per character
-        }
-      }
-      typeChar();
-    });
-  }
-
   // ── Search ───────────────────────────────────────────────
   const searchBy      = $('#search-by');
   const searchValWrap = $('#search-val-wrap');
