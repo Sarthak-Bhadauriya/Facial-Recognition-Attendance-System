@@ -70,9 +70,9 @@ body {
 .app-wrap {
   position: relative;
   z-index: 1;
-  max-width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 28px 2% 60px;
+  padding: 20px 16px 60px;
 }
 
 /* ── Hero Header ───────────────────────────────────────── */
@@ -150,6 +150,7 @@ body {
 /* ── Horizontal Navigation Bar ─────────────────────────── */
 .h-nav {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 4px;
   background: var(--surface);
@@ -370,7 +371,6 @@ kbd {
   gap: 18px;
   margin-bottom: 24px;
 }
-@media (max-width: 800px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
 
 .kpi-card {
   background: var(--surface);
@@ -443,6 +443,8 @@ kbd {
   border-radius: var(--radius-md);
   padding: 4px;
   margin-bottom: 18px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tab-btn {
   flex: 1;
@@ -663,13 +665,30 @@ tbody td:first-child { color: var(--ink); font-weight: 600; }
 
 /* ── Responsive ────────────────────────────────────────── */
 
-@media (max-width: 680px) {
-  .hero { flex-direction: column; gap: 16px; align-items: flex-start; }
-  .hero-status { align-self: flex-start; }
-  .h-nav { flex-direction: column; }
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .hero-title { font-size: 28px; }
+  .nav-btn { font-size: 13px; padding: 10px 12px; }
   .card { padding: 24px 20px; }
   .form-row { flex-direction: column; }
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .hero { flex-direction: column; gap: 16px; align-items: flex-start; padding: 20px 16px; }
+  .hero-status { align-self: flex-start; }
+  .hero-title { font-size: 24px; }
+  .h-nav { flex-direction: column; gap: 4px; padding: 8px; }
+  .nav-btn { width: 100%; justify-content: flex-start; }
+  .card { padding: 20px 16px; }
+  .kpi-grid { grid-template-columns: 1fr; }
+  .table-toolbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .tab-bar { flex-wrap: nowrap; padding-bottom: 4px; }
+  .tab-btn { white-space: nowrap; font-size: 13px; padding: 8px 12px; }
+  .kpi-value { font-size: 36px; }
+  .camera-wrap { aspect-ratio: 1; }
 }
 
 /* ── Monthly Day-by-Day Detail Table ───────────────────────────────────── */
