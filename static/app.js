@@ -132,6 +132,16 @@ function initAttendance() {
     div.innerHTML = `<span class="result-dot"></span><span>${msg}</span>`;
     resultsList.prepend(div);
     resultsEl.style.display = 'block';
+
+    // Automatically hide after 5 seconds
+    setTimeout(() => {
+      if (div.parentNode) {
+        div.remove();
+      }
+      if (resultsList.children.length === 0) {
+        resultsEl.style.display = 'none';
+      }
+    }, 5000);
   }
 
   function resetUIAfterStop() {

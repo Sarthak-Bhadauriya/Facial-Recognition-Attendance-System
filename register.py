@@ -2,7 +2,7 @@ import cv2
 import face_recognition
 import numpy as np
 import os
-from storage import load_employees, save_employee, save_encoding
+from storage import load_employees, save_employee, save_encoding, load_encodings
 from config import verify_manager_password, verify_employee_password
 
 KNOWN_FACES_DIR = 'known_faces'
@@ -54,6 +54,14 @@ def perform_registration_from_frame(emp_pwd, unique_id, name, jpeg_bytes):
         return False, "Could not extract face encoding. Please try again with better lighting."
 
     face_encoding = encs[0]
+
+    # Duplicate face check
+    existing_encs = load_encodings()
+    if existing_encs:
+        known_encodings = list(existing_encs.values())
+        matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.55)
+        if True in matches:
+            return False, "Error: This face is already registered under a different Employee ID. A person cannot be registered more than once."
 
     try:
         os.makedirs(KNOWN_FACES_DIR, exist_ok=True)
