@@ -2,9 +2,9 @@
 Attend-X — Flask Web Application
 
 Authentication model:
-  COMMON_EMPLOYEE_PASSWORD  → used for: Employee Registration
+  COMMON_EMPLOYEE_PASSWORD  → used for: Employee Registration ONLY
   MANAGER_PASSWORD          → used for: Admin Dashboard ONLY
-  Mark Attendance           → no password; uses Unique ID + face match
+  Mark Attendance           → NO password; uses Unique ID + live face match
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -21,11 +21,11 @@ IST = timezone(timedelta(hours=5, minutes=30))
 def now_ist():
     return datetime.now(IST)
 
-# ── Backend logic (all unchanged) ─────────────────────────────────────────────
 from register import perform_registration_from_frame
 from attendance import process_attendance
 from face_utils import recognize_frame_for_uid, reset_liveness
-from dashboard import get_today_attendance_df, search_attendance_df, get_monthly_summary_df, get_monthly_detail_df
+from dashboard import (get_today_attendance_df, search_attendance_df,
+                        get_monthly_summary_df, get_monthly_detail_df)
 from config import verify_manager_password, verify_employee_password
 import storage
 
@@ -52,7 +52,7 @@ def index():
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MARK ATTENDANCE  (Page 1)
-# No password required — authenticated by Unique ID + live face match only.
+# NO password — authenticated by Unique ID + live face match only.
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/api/check-uid', methods=['POST'])
@@ -66,12 +66,12 @@ def api_check_uid():
     uid  = str(data.get('uid', '')).strip()
 
     if not uid:
-        return jsonify({'exists': False, 'message': 'Please enter a Unique Employee ID.'})
+        return jsonify({'exists': False, 'message': 'Please enter your Unique Employee ID.'})
 
     employees_df   = storage.load_employees()
     encodings_dict = storage.load_encodings()
 
-    in_csv = uid in employees_df['unique_id'].astype(str).values
+    in_csv  = uid in employees_df['unique_id'].astype(str).values
     has_enc = (str(uid) in encodings_dict) or (uid in encodings_dict)
 
     if not in_csv:
@@ -87,13 +87,13 @@ def api_check_uid():
 @app.route('/api/process-frame', methods=['POST'])
 def api_process_frame():
     """
-    Receive a single JPEG frame (base64) and a target Unique ID.
-    Checks if the face in the frame matches ONLY that UID's stored encoding.
-    If matched → marks attendance via process_attendance().
+    Receive a single JPEG frame (base64) + target Unique ID.
+    Checks if the face matches ONLY that UID's stored encoding.
+    Returns result immediately — no liveness blocking.
 
-    Response result values:
+    Response 'result' values:
         'no_face'     – no face detected, keep scanning
-        'match'       – face matched, attendance marked (see message)
+        'match'       – face matched, attendance marked
         'mismatch'    – face found but does NOT match this UID
         'no_encoding' – no face encoding on file for this UID
     """
@@ -113,10 +113,6 @@ def api_process_frame():
     if result == 'no_face':
         return jsonify({'result': 'no_face', 'message': ''})
 
-    # Liveness check pending — face matched but blink not yet detected
-    if result == 'liveness_pending':
-        return jsonify({'result': 'liveness_pending', 'message': name})
-
     if result == 'mismatch':
         return jsonify({
             'result':  'mismatch',
@@ -129,7 +125,7 @@ def api_process_frame():
             'message': 'No face encoding found for this ID. Please complete registration first.',
         })
 
-    # result == 'match' → mark attendance only when liveness is confirmed
+    # result == 'match' — mark attendance
     msg          = process_attendance(target_uid, name)
     already_done = 'already completed' in msg.lower()
 
@@ -143,11 +139,7 @@ def api_process_frame():
 
 @app.route('/api/reset-liveness', methods=['POST'])
 def api_reset_liveness():
-    """Called by the frontend when camera session ends to clear liveness state."""
-    data = request.get_json() or {}
-    uid  = str(data.get('uid', '')).strip()
-    if uid:
-        reset_liveness(uid)
+    """No-op kept for JS compatibility."""
     return jsonify({'success': True})
 
 
@@ -161,7 +153,7 @@ def api_reset_liveness():
 def api_verify_employee():
     """
     Verify the common Employee Access Code.
-    Used by the Registration page to unlock the registration form.
+    Explicitly rejects the Manager Access Code with a clear message.
     """
     data = request.get_json()
     pwd  = data.get('employee_code', '')
@@ -169,7 +161,6 @@ def api_verify_employee():
     if verify_employee_password(pwd):
         return jsonify({'success': True})
 
-    # Explicitly check if they entered the manager code by mistake
     if verify_manager_password(pwd):
         return jsonify({'success': False,
                         'message': 'Incorrect — please enter the Employee Access Code, not the Manager code.'})
@@ -183,10 +174,11 @@ def api_capture_register_frame():
     Receive a JPEG frame (base64) + employee details.
     Authenticates with COMMON EMPLOYEE ACCESS CODE only.
     Extracts face encoding and saves the new employee.
+    Unique ID accepts any non-empty string (numeric, alphabetic, or mixed).
     """
     data      = request.get_json()
     emp_code  = data.get('employee_code', '')
-    uid       = data.get('uid', '').strip()
+    uid       = str(data.get('uid', '')).strip()
     name      = data.get('name', '').strip()
     frame_b64 = data.get('frame_b64', '')
 
@@ -197,6 +189,12 @@ def api_capture_register_frame():
 
     if not verify_employee_password(emp_code):
         return jsonify({'success': False, 'message': 'Incorrect Employee Access Code.'})
+
+    if not uid:
+        return jsonify({'success': False, 'message': 'Unique ID cannot be empty.'})
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Employee name cannot be empty.'})
 
     if not frame_b64:
         return jsonify({'success': False, 'message': 'No image frame received.'})
@@ -211,8 +209,8 @@ def api_capture_register_frame():
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ADMIN DASHBOARD  (Page 3)
-# Requires ONLY the MANAGER ACCESS CODE.
-# Explicitly rejects the common Employee Access Code.
+# Requires ONLY the MANAGER ACCESS CODE (separate from Employee Access Code).
+# Explicitly rejects the Employee Access Code.
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/api/dashboard/verify', methods=['POST'])
@@ -220,7 +218,7 @@ def api_dash_verify():
     """
     Gate for the Admin Dashboard.
     Only the Manager Access Code grants access.
-    Employee Access Code is explicitly rejected with a clear message.
+    Employee Access Code is explicitly rejected.
     """
     data = request.get_json()
     pwd  = data.get('manager_code', '')
@@ -228,7 +226,7 @@ def api_dash_verify():
     if verify_manager_password(pwd):
         return jsonify({'success': True})
 
-    # Explicitly check and reject the employee code
+    # Explicitly reject the employee code
     if verify_employee_password(pwd):
         return jsonify({'success': False,
                         'message': 'Manager access required. The Employee Access Code cannot unlock this page.'})
@@ -245,20 +243,22 @@ def api_dash_today():
     df        = get_today_attendance_df()
     employees = storage.load_employees()
     leaves_df = storage.load_leaves()
-    
+
     total_emp = len(employees)
     present   = 0
     late      = 0
     on_leave  = 0
-    
-    today_str = now_ist().strftime("%Y-%m-%d")
-    leaves_today = leaves_df[leaves_df['date'] == today_str]['unique_id'].astype(str).tolist() if not leaves_df.empty else []
+
+    today_str    = now_ist().strftime("%Y-%m-%d")
+    leaves_today = (
+        leaves_df[leaves_df['date'] == today_str]['unique_id'].astype(str).tolist()
+        if not leaves_df.empty else []
+    )
 
     if not df.empty:
         present = int(len(df[df['status'].isin(['Present', 'Late'])]))
         late    = int(len(df[df['status'] == 'Late']))
-        
-        # Mark leaves in the roster if absent
+
         for _, row in employees.iterrows():
             uid = str(row['unique_id'])
             if uid not in df['unique_id'].astype(str).values:
@@ -274,22 +274,23 @@ def api_dash_today():
                         'time_in': '-', 'time_out': '-', 'status': 'Absent', 'overtime_hours': 0
                     }])], ignore_index=True)
     else:
-        # No attendance yet, everyone is either absent or on leave
         for _, row in employees.iterrows():
-            uid = str(row['unique_id'])
+            uid    = str(row['unique_id'])
             status = 'On Leave' if uid in leaves_today else 'Absent'
-            if status == 'On Leave': on_leave += 1
+            if status == 'On Leave':
+                on_leave += 1
             df = pd.concat([df, pd.DataFrame([{
                 'unique_id': uid, 'name': row['name'], 'date': today_str,
                 'time_in': '-', 'time_out': '-', 'status': status, 'overtime_hours': 0
             }])], ignore_index=True)
 
-    absent = total_emp - present - on_leave
+    absent  = total_emp - present - on_leave
     records = [] if df.empty else df.fillna('').to_dict(orient='records')
 
     return jsonify({
         'success': True,
-        'metrics': {'total': total_emp, 'present': present, 'late': late, 'absent': absent, 'on_leave': on_leave},
+        'metrics': {'total': total_emp, 'present': present, 'late': late,
+                    'absent': absent, 'on_leave': on_leave},
         'records': records,
     })
 
@@ -316,7 +317,7 @@ def api_dash_monthly():
     if not verify_manager_password(data.get('manager_code', '')):
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
-    df = get_monthly_summary_df(data.get('month', ''))
+    df      = get_monthly_summary_df(data.get('month', ''))
     records = [] if df.empty else df.fillna('').to_dict(orient='records')
     return jsonify({'success': True, 'records': records})
 
@@ -331,15 +332,18 @@ def api_dash_monthly_detail():
     rows, all_days = get_monthly_detail_df(data.get('month', ''))
     return jsonify({'success': True, 'rows': rows, 'days': all_days})
 
-# ── Manage Employees Endpoints ──────────────────────────────────────────────
+
+# ── Manage Employees ──────────────────────────────────────────────────────────
+
 @app.route('/api/dashboard/employees', methods=['POST'])
 def api_dash_employees():
     data = request.get_json()
     if not verify_manager_password(data.get('manager_code', '')):
         return jsonify({'success': False, 'message': 'Unauthorized'})
-    df = storage.load_employees()
+    df      = storage.load_employees()
     records = [] if df.empty else df.fillna('').to_dict(orient='records')
     return jsonify({'success': True, 'records': records})
+
 
 @app.route('/api/dashboard/employees/update', methods=['POST'])
 def api_dash_employees_update():
@@ -349,6 +353,7 @@ def api_dash_employees_update():
     success = storage.update_employee_name(data.get('uid'), data.get('new_name'))
     return jsonify({'success': success})
 
+
 @app.route('/api/dashboard/employees/delete', methods=['POST'])
 def api_dash_employees_delete():
     data = request.get_json()
@@ -357,15 +362,18 @@ def api_dash_employees_delete():
     success = storage.delete_employee(data.get('uid'))
     return jsonify({'success': success})
 
-# ── Leave Management Endpoints ──────────────────────────────────────────────
+
+# ── Leave Management ──────────────────────────────────────────────────────────
+
 @app.route('/api/dashboard/leaves', methods=['POST'])
 def api_dash_leaves():
     data = request.get_json()
     if not verify_manager_password(data.get('manager_code', '')):
         return jsonify({'success': False, 'message': 'Unauthorized'})
-    df = storage.load_leaves()
+    df      = storage.load_leaves()
     records = [] if df.empty else df.fillna('').to_dict(orient='records')
     return jsonify({'success': True, 'records': records})
+
 
 @app.route('/api/dashboard/leaves/add', methods=['POST'])
 def api_dash_leaves_add():

@@ -2,13 +2,13 @@
    Attend-X — Frontend Logic  (ES6+, no dependencies)
 
    Auth model:
-     Page 1 – Mark Attendance: NO password, Unique ID + face match
-     Page 2 – Register:        Employee Access Code ONLY
-     Page 3 – Admin Dashboard: Manager Access Code ONLY
+     Page 1 – Mark Attendance:  NO password; Unique ID + face match
+     Page 2 – Register:         Employee Access Code ONLY
+     Page 3 – Admin Dashboard:  Manager Access Code ONLY
    ========================================================= */
 'use strict';
 
-// ── Tiny DOM helpers ──────────────────────────────────────────────────────────
+// ── DOM helpers ───────────────────────────────────────────────────────────────
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 
 async function apiFetch(url, body) {
@@ -26,44 +26,47 @@ function showAlert(el, msg, type = 'error') {
   el.textContent = msg;
   el.style.display = 'block';
 }
-function hideAlert(el) { if (el) { el.style.display = 'none'; el.textContent = ''; } }
+function hideAlert(el) {
+  if (el) { el.style.display = 'none'; el.textContent = ''; }
+}
 
-// ── Theme Management ─────────────────────────────────────────────────────────────
+// ── Theme ─────────────────────────────────────────────────────────────────────
 function initTheme() {
   const btn  = $('#theme-toggle-btn');
   const icon = $('#theme-icon');
 
-  const sunIcon  = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
-  const moonIcon = `<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
+  const moonPath = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
+  const sunPaths = `<circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
 
-  function setTheme(isDark) {
-    if (isDark) {
-      document.body.classList.add('dark-theme');
-      if (icon) icon.innerHTML = moonIcon;
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-theme');
-      if (icon) icon.innerHTML = sunIcon;
-      localStorage.setItem('theme', 'light');
-    }
+  function setTheme(dark) {
+    document.body.classList.toggle('dark-theme', dark);
+    if (icon) icon.innerHTML = dark ? sunPaths : moonPath;
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
   }
 
   const saved = localStorage.getItem('theme');
-  if (saved === 'dark')       setTheme(true);
-  else if (saved === 'light') setTheme(false);
-  else setTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (saved) setTheme(saved === 'dark');
+  else setTheme(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
 
-  if (btn) btn.addEventListener('click', () => setTheme(!document.body.classList.contains('dark-theme')));
+  btn?.addEventListener('click', () => setTheme(!document.body.classList.contains('dark-theme')));
 }
 
-// ── Navigation ─────────────────────────────────────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────────────────────
 function initNav() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
-      $(`#page-${btn.dataset.page}`).classList.add('active');
+      $(`#page-${btn.dataset.page}`)?.classList.add('active');
     });
   });
 
@@ -72,12 +75,12 @@ function initNav() {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
-      $(`#tab-${btn.dataset.tab}`).classList.add('active');
+      $(`#tab-${btn.dataset.tab}`)?.classList.add('active');
     });
   });
 }
 
-// ── Camera helpers ─────────────────────────────────────────────────────────────
+// ── Camera helpers ────────────────────────────────────────────────────────────
 async function startCamera(videoEl) {
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
@@ -97,13 +100,13 @@ function captureFrame(videoEl, canvasEl, quality = 0.85) {
   canvasEl.width  = videoEl.videoWidth  || 640;
   canvasEl.height = videoEl.videoHeight || 480;
   canvasEl.getContext('2d').drawImage(videoEl, 0, 0);
-  return canvasEl.toDataURL('image/jpeg', quality).split(',')[1]; // base64 only
+  return canvasEl.toDataURL('image/jpeg', quality).split(',')[1];
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
 // PAGE 1: Mark Attendance
-// No password prompt. Flow: Enter UID → check UID exists → open camera
-// → send frames → check if detected face matches THIS UID's stored encoding
+// NO password at all. Flow: Enter UID → check UID exists → open camera →
+// send frames → compare face against THIS UID's stored encoding → mark
 // ═════════════════════════════════════════════════════════════════════════════
 function initAttendance() {
   const uidInput    = $('#att-uid');
@@ -131,66 +134,66 @@ function initAttendance() {
     resultsEl.style.display = 'block';
   }
 
-  // Fully stop camera, reset liveness state, reset UI
-  async function stopSession() {
+  function resetUIAfterStop() {
+    stopCamera(cameraStream); cameraStream = null;
     clearInterval(recogTimer); recogTimer = null;
     clearTimeout(timeoutTimer); timeoutTimer = null;
     recogBusy = false;
-    stopCamera(cameraStream); cameraStream = null;
     camSection.style.display = 'none';
     stopBtn.style.display    = 'none';
     startBtn.style.display   = 'inline-flex';
     startBtn.disabled        = false;
-
-    // Clear liveness state on server for this UID
-    if (currentUid) {
-      try { await apiFetch('/api/reset-liveness', { uid: currentUid }); } catch (_) {}
-    }
+    startBtn.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+      Start Attendance`;
   }
 
-  // One recognition cycle
   async function runFrame() {
     if (!cameraStream || recogBusy) return;
     recogBusy = true;
-
     try {
-      const uid      = uidInput.value.trim();
       const frameB64 = captureFrame(video, canvas);
-      const data     = await apiFetch('/api/process-frame', { target_uid: uid, frame_b64: frameB64 });
+      const data     = await apiFetch('/api/process-frame', {
+        target_uid: currentUid,
+        frame_b64:  frameB64,
+      });
 
       switch (data.result) {
         case 'no_face':
-          scanLabel.textContent = 'Scanning for face…';
-          break;
-
-        case 'liveness_pending':
-          scanLabel.textContent = data.message || 'Please blink to verify…';
+          // Keep scanning — do nothing, label stays "Scanning for face..."
           break;
 
         case 'mismatch':
+          // Stop immediately on mismatch
+          clearInterval(recogTimer); recogTimer = null;
+          clearTimeout(timeoutTimer); timeoutTimer = null;
           scanLabel.textContent = 'Face does not match';
           logResult(data.message, 'error');
-          await stopSession();
+          setTimeout(resetUIAfterStop, 2000);
           break;
 
         case 'no_encoding':
-          scanLabel.textContent = 'No face data for this ID';
+          clearInterval(recogTimer); recogTimer = null;
+          clearTimeout(timeoutTimer); timeoutTimer = null;
+          scanLabel.textContent = 'No face data on file';
           logResult(data.message, 'error');
-          await stopSession();
+          setTimeout(resetUIAfterStop, 2000);
           break;
 
         case 'match':
+          clearInterval(recogTimer); recogTimer = null;
+          clearTimeout(timeoutTimer); timeoutTimer = null;
           scanLabel.textContent = `Recognised: ${data.name}`;
           logResult(data.message, data.already_done ? 'warn' : 'success');
-          await stopSession();
+          setTimeout(resetUIAfterStop, 2500);
           break;
       }
-    } catch (_) { /* network hiccup — continue next cycle */ }
-
+    } catch (_) { /* network hiccup — continue */ }
     recogBusy = false;
   }
 
-  // Start button
   startBtn.addEventListener('click', async () => {
     const uid = uidInput.value.trim();
     if (!uid) {
@@ -203,21 +206,29 @@ function initAttendance() {
     startBtn.textContent = 'Checking ID…';
 
     const check = await apiFetch('/api/check-uid', { uid });
-    startBtn.textContent = 'Start Attendance';
-
     if (!check.exists) {
       showAlert(errEl, check.message);
-      startBtn.disabled = false;
+      startBtn.disabled    = false;
+      startBtn.textContent = 'Start Attendance';
+      startBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+        Start Attendance`;
       return;
     }
 
     currentUid = uid;
-
     try {
       cameraStream = await startCamera(video);
     } catch (e) {
       showAlert(errEl, `Camera access denied: ${e.message}`);
       startBtn.disabled = false;
+      startBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+        Start Attendance`;
       return;
     }
 
@@ -226,21 +237,21 @@ function initAttendance() {
     stopBtn.style.display    = 'inline-flex';
     scanLabel.textContent    = 'Scanning for face…';
 
-    // 30 second hard timeout (extended from 10s)
-    timeoutTimer = setTimeout(async () => {
+    // 30 second hard timeout — prevents indefinite hang
+    timeoutTimer = setTimeout(() => {
       if (cameraStream) {
-        scanLabel.textContent = 'Timeout: No face detected';
-        logResult('Could not detect a face within the time limit. Please try again.', 'error');
-        await stopSession();
+        scanLabel.textContent = 'Timed out — no face detected';
+        logResult('Could not detect a face within 30 seconds. Please try again.', 'error');
+        resetUIAfterStop();
       }
     }, 30000);
 
-    // Run recognition every 1s (faster than before); also fire after 800ms warm-up
-    recogTimer = setInterval(runFrame, 1000);
-    setTimeout(runFrame, 800);
+    // Run recognition every 1.2 seconds; first attempt after 1 second (camera warm-up)
+    setTimeout(runFrame, 1000);
+    recogTimer = setInterval(runFrame, 1200);
   });
 
-  stopBtn.addEventListener('click', stopSession);
+  stopBtn.addEventListener('click', resetUIAfterStop);
   uidInput.addEventListener('input', () => hideAlert(errEl));
 }
 
@@ -248,7 +259,8 @@ function initAttendance() {
 // ═════════════════════════════════════════════════════════════════════════════
 // PAGE 2: Register New Employee
 // Requires COMMON EMPLOYEE ACCESS CODE only.
-// Manager code must be rejected explicitly.
+// Manager code is explicitly rejected.
+// Unique ID: any non-empty string (numeric, alphabetic, or mixed).
 // ═════════════════════════════════════════════════════════════════════════════
 function initRegister() {
   const codeInput  = $('#reg-emp-code');
@@ -278,20 +290,19 @@ function initRegister() {
 
     hideAlert(codeErrEl);
 
-    if (!uid) {
-      showAlert(codeErrEl, 'Please enter the Unique Employee ID.');
-      return;
-    }
-    if (!name) {
-      showAlert(codeErrEl, 'Please enter the Employee Full Name.');
-      return;
-    }
+    if (!uid)  { showAlert(codeErrEl, 'Please enter the Unique Employee ID.'); return; }
+    if (!name) { showAlert(codeErrEl, 'Please enter the Employee Full Name.'); return; }
 
     openCamBtn.disabled    = true;
     openCamBtn.textContent = 'Verifying…';
     const verify = await apiFetch('/api/verify-employee', { employee_code: code });
     openCamBtn.disabled    = false;
-    openCamBtn.textContent = 'Open Camera';
+    openCamBtn.innerHTML   = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      Open Camera`;
 
     if (!verify.success) {
       showAlert(codeErrEl, verify.message || 'Incorrect Employee Access Code.');
@@ -299,14 +310,12 @@ function initRegister() {
     }
 
     codeVerified = true;
-
     try {
       cameraStream = await startCamera(video);
     } catch (e) {
       showAlert(codeErrEl, `Camera access denied: ${e.message}`);
       return;
     }
-
     camSection.style.display = 'block';
     openCamBtn.style.display = 'none';
   });
@@ -321,7 +330,7 @@ function initRegister() {
     const name = $('#reg-name').value.trim();
     const code = codeInput.value.trim();
 
-    if (!uid) { showAlert(codeErrEl, 'Please enter the Unique Employee ID.'); return; }
+    if (!uid)  { showAlert(codeErrEl, 'Please enter the Unique Employee ID.'); return; }
     if (!name) { showAlert(codeErrEl, 'Please enter the Employee Full Name.'); return; }
 
     captureBtn.disabled    = true;
@@ -332,8 +341,12 @@ function initRegister() {
       employee_code: code, uid, name, frame_b64: frameB64,
     });
 
-    captureBtn.disabled    = false;
-    captureBtn.textContent = 'Capture Face';
+    captureBtn.disabled  = false;
+    captureBtn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+      </svg>
+      Capture Face`;
 
     showAlert(resultEl, data.message, data.success ? 'success' : 'error');
 
@@ -342,9 +355,9 @@ function initRegister() {
       codeVerified = false;
       camSection.style.display = 'none';
       openCamBtn.style.display = 'block';
-      codeInput.value      = '';
-      $('#reg-uid').value  = '';
-      $('#reg-name').value = '';
+      codeInput.value       = '';
+      $('#reg-uid').value   = '';
+      $('#reg-name').value  = '';
       detailsDiv.style.display = 'none';
     }
   });
@@ -359,12 +372,13 @@ function initRegister() {
 
 // ═════════════════════════════════════════════════════════════════════════════
 // PAGE 3: Admin Dashboard
+// Requires MANAGER ACCESS CODE only — separate from Employee code.
 // ═════════════════════════════════════════════════════════════════════════════
 let _managerCode = '';
+let _todayData   = [];
 let _searchData  = [];
 let _monthlyData = [];
 let _detailData  = { rows: [], days: [] };
-let _todayData   = [];
 
 function initDashboard() {
   const mgrInput = $('#dash-mgr-code');
@@ -391,40 +405,23 @@ function initDashboard() {
     }
 
     _managerCode = code;
-    authCard.style.cssText = 'opacity:0;transform:translateY(-8px);transition:all 0.28s ease;';
-    setTimeout(() => {
-      authCard.style.display = 'none';
-      content.style.cssText  = 'display:block;opacity:0;transform:translateY(10px);transition:all 0.32s ease;';
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        content.style.opacity   = '1';
-        content.style.transform = 'translateY(0)';
-      }));
-      loadTodayData();
-    }, 280);
+    authCard.style.display = 'none';
+    content.style.display  = 'block';
+    loadTodayData();
   });
 
   $('#dash-lock-btn').addEventListener('click', () => {
-    _managerCode = null;
+    _managerCode = '';
     mgrInput.value = '';
-    content.style.cssText = 'display:block;opacity:1;transform:translateY(0);transition:all 0.28s ease;';
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      content.style.opacity   = '0';
-      content.style.transform = 'translateY(10px)';
-      setTimeout(() => {
-        content.style.display = 'none';
-        authCard.style.cssText = 'display:block;opacity:0;transform:translateY(-8px);transition:all 0.32s ease;';
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          authCard.style.opacity   = '1';
-          authCard.style.transform = 'translateY(0)';
-        }));
-      }, 280);
-    }));
+    content.style.display  = 'none';
+    authCard.style.display = 'block';
+    hideAlert(errEl);
   });
 
   mgrInput.addEventListener('keydown', e => { if (e.key === 'Enter') authBtn.click(); });
   mgrInput.addEventListener('input',   () => hideAlert(errEl));
 
-  // ── Today ────────────────────────────────────────────────
+  // ── Today's Roster ────────────────────────────────────────
   async function loadTodayData() {
     const data = await apiFetch('/api/dashboard/today', { manager_code: _managerCode });
     if (!data.success) return;
@@ -434,13 +431,13 @@ function initDashboard() {
     $('#kpi-late').textContent    = m.late;
     $('#kpi-absent').textContent  = m.absent;
     _todayData = data.records;
-    renderTable(data.records, $('#today-table-wrap'));
+    renderTable(_todayData, $('#today-table-wrap'));
   }
 
   $('#export-today-btn').addEventListener('click',
     () => exportCSV(_todayData, 'today_attendance.csv'));
 
-  // ── Search ───────────────────────────────────────────────
+  // ── Search Records ────────────────────────────────────────
   const searchBy      = $('#search-by');
   const searchValWrap = $('#search-val-wrap');
   const dateRangeWrap = $('#date-range-wrap');
@@ -469,24 +466,30 @@ function initDashboard() {
   $('#export-search-btn').addEventListener('click',
     () => exportCSV(_searchData, 'search_results.csv'));
 
-  // ── Monthly Summary + Detail ─────────────────────────────
+  // ── Monthly Summary + Day-by-Day Detail ───────────────────
   $('#month-btn').addEventListener('click', async () => {
     const month = $('#month-input').value;
     if (!month) { alert('Please select a month first.'); return; }
 
-    // Reset UI
+    const btnEl = $('#month-btn');
+    btnEl.disabled    = true;
+    btnEl.textContent = 'Loading…';
+
     $('#monthly-summary-section').style.display = 'none';
-    $('#monthly-empty').style.display = 'none';
-    $('#monthly-table-wrap').innerHTML = '';
-    $('#monthly-detail-wrap').innerHTML = '';
+    $('#monthly-empty').style.display            = 'none';
+    $('#monthly-table-wrap').innerHTML           = '';
+    $('#monthly-detail-wrap').innerHTML          = '';
 
-    // 1. Fetch totals summary
-    const sumData = await apiFetch('/api/dashboard/monthly', { manager_code: _managerCode, month });
+    const [sumData, detData] = await Promise.all([
+      apiFetch('/api/dashboard/monthly',        { manager_code: _managerCode, month }),
+      apiFetch('/api/dashboard/monthly-detail', { manager_code: _managerCode, month }),
+    ]);
+
+    btnEl.disabled    = false;
+    btnEl.textContent = 'Generate Report';
+
     _monthlyData = sumData.records || [];
-
-    // 2. Fetch day-by-day detail
-    const detData = await apiFetch('/api/dashboard/monthly-detail', { manager_code: _managerCode, month });
-    _detailData = { rows: detData.rows || [], days: detData.days || [] };
+    _detailData  = { rows: detData.rows || [], days: detData.days || [] };
 
     const hasData = _monthlyData.length > 0 || _detailData.rows.length > 0;
 
@@ -496,24 +499,18 @@ function initDashboard() {
     }
 
     $('#monthly-summary-section').style.display = 'block';
-
-    // Render totals table
     renderTable(_monthlyData, $('#monthly-table-wrap'));
-
-    // Render day-by-day detail table
     renderMonthlyDetail(_detailData.rows, _detailData.days, $('#monthly-detail-wrap'));
   });
 
-  $('#export-month-btn').addEventListener('click', () => {
-    exportCSV(_monthlyData, `monthly_summary_${$('#month-input').value || 'export'}.csv`);
-  });
+  $('#export-month-btn').addEventListener('click', () =>
+    exportCSV(_monthlyData, `monthly_summary_${$('#month-input').value || 'export'}.csv`));
 
-  $('#export-detail-btn').addEventListener('click', () => {
+  $('#export-detail-btn').addEventListener('click', () =>
     exportMonthlyDetailCSV(_detailData.rows, _detailData.days,
-      `monthly_detail_${$('#month-input').value || 'export'}.csv`);
-  });
+      `monthly_detail_${$('#month-input').value || 'export'}.csv`));
 
-  // ── Leaves ──────────────────────────────────────────────
+  // ── Manage Leaves ─────────────────────────────────────────
   async function loadLeavesData() {
     const data = await apiFetch('/api/dashboard/leaves', { manager_code: _managerCode });
     if (data.success) renderTable(data.records || [], $('#leaves-table-wrap'));
@@ -529,65 +526,66 @@ function initDashboard() {
     btn.disabled = true;
     const res = await apiFetch('/api/dashboard/leaves/add',
       { manager_code: _managerCode, uid, date, leave_type: type });
-    if (res.success) {
-      alert('Leave record added successfully.');
-      loadLeavesData();
-    } else {
-      alert(res.message || 'Error adding leave.');
-    }
     btn.disabled = false;
+    if (res.success) { alert('Leave record added successfully.'); loadLeavesData(); }
+    else alert(res.message || 'Error adding leave.');
   });
 
-  // ── Employees ────────────────────────────────────────────
+  // ── Manage Employees ──────────────────────────────────────
   async function loadEmployeesData() {
     const data = await apiFetch('/api/dashboard/employees', { manager_code: _managerCode });
     if (data.success) renderEmployeesTable(data.records || [], $('#employees-table-wrap'));
   }
 
   function renderEmployeesTable(records, wrap) {
-    if (!records || records.length === 0) {
-      wrap.innerHTML = '<div class="empty-state"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="display:block;margin:0 auto 10px;opacity:.35"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>No employees found.</div>';
+    if (!records || !records.length) {
+      wrap.innerHTML = emptyState('No employees found.');
       return;
     }
     const cols  = Object.keys(records[0]);
     const heads = cols.map(c => `<th>${fmtCol(c)}</th>`).join('') + '<th>Actions</th>';
     const rows  = records.map(r => {
-      const cells = cols.map(c => `<td>${r[c]}</td>`).join('');
+      const cells = cols.map(c => `<td>${r[c] ?? '—'}</td>`).join('');
       const acts  = `<td>
-        <button class="btn btn-outline btn-sm edit-emp-btn" data-uid="${r.unique_id}" data-name="${r.name}" style="padding:4px 8px;font-size:11px;margin-right:4px">Edit</button>
-        <button class="btn btn-sm del-emp-btn" data-uid="${r.unique_id}" style="padding:4px 8px;font-size:11px;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer">Delete</button>
+        <button class="btn btn-outline btn-sm edit-emp-btn"
+                data-uid="${r.unique_id}" data-name="${r.name}"
+                style="padding:4px 8px;font-size:11px;margin-right:4px">Edit</button>
+        <button class="btn btn-sm del-emp-btn"
+                data-uid="${r.unique_id}"
+                style="padding:4px 8px;font-size:11px;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer">Delete</button>
       </td>`;
       return `<tr>${cells}${acts}</tr>`;
     }).join('');
-    wrap.innerHTML = `<div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    wrap.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr>${heads}</tr></thead><tbody>${rows}</tbody>
+    </table></div>`;
 
     wrap.querySelectorAll('.edit-emp-btn').forEach(b => {
       b.addEventListener('click', async () => {
         const uid     = b.dataset.uid;
         const oldName = b.dataset.name;
         const newName = prompt(`Enter new name for ${uid}:`, oldName);
-        if (newName && newName !== oldName) {
+        if (newName && newName.trim() && newName.trim() !== oldName) {
           const res = await apiFetch('/api/dashboard/employees/update',
-            { manager_code: _managerCode, uid, new_name: newName });
+            { manager_code: _managerCode, uid, new_name: newName.trim() });
           if (res.success) loadEmployeesData();
-          else alert('Error updating employee.');
+          else alert('Error updating employee name.');
         }
       });
     });
     wrap.querySelectorAll('.del-emp-btn').forEach(b => {
       b.addEventListener('click', async () => {
         const uid = b.dataset.uid;
-        if (confirm(`Delete employee ${uid}? This will also delete their face data and cannot be undone.`)) {
-          const res = await apiFetch('/api/dashboard/employees/delete',
-            { manager_code: _managerCode, uid });
-          if (res.success) loadEmployeesData();
-          else alert('Error deleting employee.');
-        }
+        if (!confirm(`Delete employee ${uid}? This also removes their face data and cannot be undone.`)) return;
+        const res = await apiFetch('/api/dashboard/employees/delete',
+          { manager_code: _managerCode, uid });
+        if (res.success) loadEmployeesData();
+        else alert('Error deleting employee.');
       });
     });
   }
 
-  // Lazy load tab data on click
+  // Lazy-load tab data when tabs are clicked
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if (btn.dataset.tab === 'leaves')    loadLeavesData();
@@ -597,14 +595,10 @@ function initDashboard() {
   });
 }
 
-// ── Generic Table rendering ───────────────────────────────────────────────────
+// ── Generic Table ─────────────────────────────────────────────────────────────
 function renderTable(records, wrap) {
-  if (!records || records.length === 0) {
-    wrap.innerHTML = `<div class="empty-state">
-      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
-           style="display:block;margin:0 auto 10px;opacity:.35">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>No records found.</div>`;
+  if (!records || !records.length) {
+    wrap.innerHTML = emptyState('No records found.');
     return;
   }
   const cols  = Object.keys(records[0]);
@@ -616,41 +610,38 @@ function renderTable(records, wrap) {
     }).join('');
     return `<tr>${cells}</tr>`;
   }).join('');
-  wrap.innerHTML = `<div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  wrap.innerHTML = `<div class="table-wrap">
+    <table><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
+  </div>`;
 }
 
-// ── Monthly Day-by-Day Detail Table ──────────────────────────────────────────
+// ── Monthly Day-by-Day Table ──────────────────────────────────────────────────
 function renderMonthlyDetail(rows, days, wrap) {
-  if (!rows || rows.length === 0 || !days || days.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">No employee records to display.</div>';
+  if (!rows?.length || !days?.length) {
+    wrap.innerHTML = emptyState('No employee records for this month.');
     return;
   }
 
-  // Column headers: Name | UID | Day1 | Day2 … | P | L | A | I
-  const dayHeaders = days.map(d => {
-    const num = d.slice(8); // day number e.g. "09"
-    return `<th class="day-col">${parseInt(num, 10)}</th>`;
-  }).join('');
-
+  const dayHeaders = days.map(d => `<th class="day-col">${parseInt(d.slice(8), 10)}</th>`).join('');
   const thead = `<tr>
-    <th style="min-width:130px">Name</th>
+    <th style="min-width:130px;position:sticky;left:0;background:var(--surface-2)">Name</th>
     <th style="min-width:80px">ID</th>
     ${dayHeaders}
-    <th class="total-col" title="Present">P</th>
-    <th class="total-col" title="Late">L</th>
-    <th class="total-col" title="Absent">A</th>
-    <th class="total-col" title="Incomplete">I</th>
+    <th class="total-col" title="Present days">P</th>
+    <th class="total-col" title="Late days">L</th>
+    <th class="total-col" title="Absent days">A</th>
+    <th class="total-col" title="Incomplete days">I</th>
   </tr>`;
 
   const tbody = rows.map(emp => {
     const dayCells = days.map(d => {
-      const s = emp.days[d] || '-';
+      const s   = emp.days[d] || '-';
       const cls = { P:'dc-p', L:'dc-l', A:'dc-a', I:'dc-i', OL:'dc-ol' }[s] || '';
       return `<td class="day-cell ${cls}">${s}</td>`;
     }).join('');
     const t = emp.totals;
     return `<tr>
-      <td style="font-weight:600;color:var(--ink)">${emp.name}</td>
+      <td style="font-weight:600;color:var(--ink);position:sticky;left:0;background:var(--surface)">${emp.name}</td>
       <td style="color:var(--ink-muted);font-size:12px">${emp.uid}</td>
       ${dayCells}
       <td class="total-cell tc-p">${t.present}</td>
@@ -660,46 +651,65 @@ function renderMonthlyDetail(rows, days, wrap) {
     </tr>`;
   }).join('');
 
-  wrap.innerHTML = `<table class="detail-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+  wrap.innerHTML = `<div class="table-wrap">
+    <table class="detail-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+  </div>`;
 }
 
-// ── Monthly Detail CSV export ─────────────────────────────────────────────────
+// ── Monthly Detail CSV Export ─────────────────────────────────────────────────
 function exportMonthlyDetailCSV(rows, days, filename) {
-  if (!rows || !rows.length) return;
-  const dayNums = days.map(d => parseInt(d.slice(8), 10));
-  const header  = ['Name', 'ID', ...dayNums, 'Present', 'Late', 'Absent', 'Incomplete'];
+  if (!rows?.length) return;
+  const header = ['Name', 'ID', ...days.map(d => parseInt(d.slice(8), 10)),
+                   'Present', 'Late', 'Absent', 'Incomplete'];
   const csvRows = rows.map(emp => {
     const dayCols = days.map(d => emp.days[d] || '-');
     const t = emp.totals;
     return [emp.name, emp.uid, ...dayCols, t.present, t.late, t.absent, t.incomplete]
       .map(v => `"${v}"`).join(',');
   });
-  const blob = new Blob([[header.join(','), ...csvRows].join('\n')], { type: 'text/csv' });
-  Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename }).click();
+  downloadCSV([header.join(','), ...csvRows].join('\n'), filename);
 }
 
-// ── Shared helpers ─────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtCol(k) {
   return k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function statusBadge(s) {
-  const cls = { present: 'badge-present', late: 'badge-late',
-                absent: 'badge-absent' }[(s || '').toLowerCase()] || 'badge-incomplete';
+  const cls = {
+    present:    'badge-present',
+    late:       'badge-late',
+    absent:     'badge-absent',
+    'on leave': 'badge-leave',
+  }[(s || '').toLowerCase()] || 'badge-incomplete';
   return `<span class="badge ${cls}">${s || '—'}</span>`;
 }
 
+function emptyState(msg) {
+  return `<div class="empty-state">
+    <svg width="38" height="38" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.4"
+         style="display:block;margin:0 auto 10px;opacity:.35">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>${msg}</div>`;
+}
+
 function exportCSV(data, filename) {
-  if (!data || !data.length) return;
+  if (!data?.length) return;
   const cols = Object.keys(data[0]);
   const rows = [cols.join(','), ...data.map(r => cols.map(c => `"${r[c] ?? ''}"`).join(','))];
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  downloadCSV(rows.join('\n'), filename);
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv' });
   Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob), download: filename,
+    href:     URL.createObjectURL(blob),
+    download: filename,
   }).click();
 }
 
-// ── Bootstrap ──────────────────────────────────────────────────────────────────
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initNav();
