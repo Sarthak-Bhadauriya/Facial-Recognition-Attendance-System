@@ -58,10 +58,16 @@ def perform_registration_from_frame(emp_pwd, unique_id, name, jpeg_bytes):
     # Duplicate face check
     existing_encs = load_encodings()
     if existing_encs:
+        known_uids = list(existing_encs.keys())
         known_encodings = list(existing_encs.values())
         matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.55)
-        if True in matches:
-            return False, "Error: This face is already registered under a different Employee ID. A person cannot be registered more than once."
+        
+        if any(matches):
+            for i, match in enumerate(matches):
+                if match:
+                    matched_uid = known_uids[i]
+                    return False, f"Error: This face is already registered under Unique I-D '{matched_uid}'. The same person cannot be registered twice under a different I-D."
+            return False, "Error: This face is already registered under a different Employee ID."
 
     try:
         os.makedirs(KNOWN_FACES_DIR, exist_ok=True)
