@@ -35,6 +35,15 @@ def recognize_frame_for_uid(jpeg_bytes, target_uid):
     if not face_locs:
         return 'no_face', ''
 
+    # Basic Liveness Heuristic (Blur/Texture check)
+    # Replaces heavy ML models which are incompatible with Python 3.14
+    gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+    variance = cv2.Laplacian(gray, cv2.CV_64F).var()
+    
+    # A very low variance usually indicates a printed photo or screen
+    if variance < 30.0:
+        return 'spoof', ''
+
     face_encs = face_recognition.face_encodings(small, face_locs)
     if not face_encs:
         return 'no_face', ''

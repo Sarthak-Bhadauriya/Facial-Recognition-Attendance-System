@@ -184,6 +184,15 @@ function initAttendance() {
           setTimeout(resetUIAfterStop, 2000);
           break;
 
+        case 'spoof':
+          // Stop immediately on spoof detection
+          clearInterval(recogTimer); recogTimer = null;
+          clearTimeout(timeoutTimer); timeoutTimer = null;
+          scanLabel.textContent = 'Spoofing Detected';
+          logResult(data.message, 'error');
+          setTimeout(resetUIAfterStop, 2500);
+          break;
+
         case 'no_encoding':
           clearInterval(recogTimer); recogTimer = null;
           clearTimeout(timeoutTimer); timeoutTimer = null;

@@ -6,3 +6,4 @@ numpy
 pandas
 openpyxl
 google-generativeai
+deepface

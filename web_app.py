@@ -119,6 +119,12 @@ def api_process_frame():
             'message': 'Face does not match the entered Unique ID. Attendance not marked.',
         })
 
+    if result == 'spoof':
+        return jsonify({
+            'result':  'spoof',
+            'message': 'Spoofing Detected: Please show a real face, not a photo.',
+        })
+
     if result == 'no_encoding':
         return jsonify({
             'result':  'no_encoding',
